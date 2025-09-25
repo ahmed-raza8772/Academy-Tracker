@@ -22,7 +22,7 @@ import Blank from "./pages/Blank";
 
 // Admin Pages
 import AdminDashboard from "./pages/AdminPages/Home";
-import AddClasses from "./pages/AdminPages/relatedClasses/addClasses";
+import AddClasses from "./pages/AdminPages/relatedClasses/AddClasses";
 import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
 
 // Role-specific pages (you'll need to create these)
