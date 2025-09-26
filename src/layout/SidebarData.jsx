@@ -15,12 +15,12 @@ export const AdminSidebarData = [
     subItems: [
       {
         name: "Add Student",
-        path: "/blank",
+        path: "/Admin/Students/Add",
         icon: <FaIcons.FaUserPlus />,
       },
       {
         name: "Manage Students",
-        path: "/blank",
+        path: "/Admin/Students/Manage",
         icon: <FaIcons.FaUsersCog />,
       },
     ],

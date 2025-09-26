@@ -26,9 +26,6 @@ export default function AddClasses() {
   };
 
   const handleSubmit = async (e) => {
-    setLoading(true);
-    e.preventDefault();
-
     if (
       !formData.classCode.trim() ||
       !formData.className.trim() ||
@@ -41,9 +38,12 @@ export default function AddClasses() {
       });
 
       // ⏳ Auto-hide after 3 seconds
-      setTimeout(() => setAlert(null), 1500);
+      setTimeout(() => setAlert(null), 2500);
       return;
     }
+
+    setLoading(true);
+    e.preventDefault();
 
     try {
       const response = await fetch(`${API_URL}/api/v1/Classes/create`, {

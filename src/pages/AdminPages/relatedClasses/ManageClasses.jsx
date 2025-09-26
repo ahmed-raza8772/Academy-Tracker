@@ -16,6 +16,7 @@ import { Modal } from "../../../components/ui/modal";
 import Label from "../../../components/form/Label";
 import Button from "../../../components/ui/button/Button";
 import Alert from "../../../components/ui/alert/Alert";
+import Select from "../../../components/form/Select";
 import ConfirmationModal from "../../../components/form/ConfirmationModal";
 // 💡 Import the new component
 //mport ActionIcons from "../../../components/tables/BasicTables/ActionIcons"; // Adjust path as needed
@@ -42,6 +43,11 @@ export default function ManageClasses() {
     grade: "",
   });
 
+  const options = [
+    { value: "true", label: "Active" },
+    { value: "false", label: "Not Active" },
+  ];
+
   useEffect(() => {
     const fetchClasses = async () => {
       try {
@@ -56,11 +62,13 @@ export default function ManageClasses() {
         const data = await response.json();
 
         // ✅ Only keep classes with status === true
-        const filteredClasses = Array.isArray(data)
-          ? data.filter((cls) => cls.status === true)
-          : [];
+        // const filteredClasses = Array.isArray(data)
+        //   ? data.filter((cls) => cls.status === true)
+        //   : [];
 
-        setClasses(filteredClasses);
+        // setClasses(filteredClasses);
+
+        setClasses(Array.isArray(data) ? data : []);
 
         console.log(data);
       } catch (error) {
@@ -91,11 +99,12 @@ export default function ManageClasses() {
   };
 
   const handleUpdate = (classItem) => {
-    setSelectedClass(classItem); // keep reference
+    setSelectedClass(classItem);
     setFormData({
       classCode: classItem.classCode,
       className: classItem.className,
       grade: classItem.grade,
+      status: classItem.status, // true or false
     });
     setIsUpdateOpen(true);
   };
@@ -163,15 +172,21 @@ export default function ManageClasses() {
     }
   };
 
+  const handleSelectChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      status: value === "true", // convert string to boolean
+    }));
+  };
+
   const handleSave = async () => {
     setLoading(true);
     try {
-      // ✅ Only include allowed fields
       const updatedClass = {
         classCode: formData.classCode,
         className: formData.className,
         grade: formData.grade,
-        status: true,
+        status: formData.status, // boolean true/false
       };
 
       const response = await fetch(
@@ -186,14 +201,11 @@ export default function ManageClasses() {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to update class");
-      }
+      if (!response.ok) throw new Error("Failed to update class");
 
       const data = await response.json();
       console.log("Updated class:", data);
 
-      // ✅ Update frontend state without refresh
       setClasses((prev) =>
         prev.map((cls) =>
           cls._id === selectedClass._id ? { ...cls, ...updatedClass } : cls
@@ -324,6 +336,12 @@ export default function ManageClasses() {
                         isHeader
                         className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
                       >
+                        Status
+                      </TableCell>
+                      <TableCell
+                        isHeader
+                        className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
+                      >
                         Actions
                       </TableCell>
                     </TableRow>
@@ -345,6 +363,9 @@ export default function ManageClasses() {
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                             {order.grade}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                            {order.status ? "Active" : "Not Active"}
                           </TableCell>
 
                           {/* 💡 Use the new component and pass handlers */}
@@ -508,6 +529,15 @@ export default function ManageClasses() {
                       name="grade"
                       value={formData.grade}
                       onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <Select
+                      options={options}
+                      placeholder="Choose a status"
+                      onChange={handleSelectChange}
+                      defaultValue={formData.status ? "true" : "false"} // preselect value
                     />
                   </div>
                 </div>

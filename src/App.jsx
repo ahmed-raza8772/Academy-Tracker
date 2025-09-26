@@ -32,6 +32,9 @@ import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
 
 // Auth store
 import { useAuthStore } from "./hooks/useAuth";
+import Loader from "./components/common/Loader";
+import AddStudents from "./pages/AdminPages/relatedStudents/AddStudents";
+import ManageStudents from "./pages/AdminPages/relatedStudents/ManageSudents";
 
 // --- Helpers ---
 function isTokenExpired(token) {
@@ -53,7 +56,7 @@ const AuthWrapper = ({ children, requiredRole = null }) => {
     setIsChecking(false);
   }, []);
 
-  if (isChecking) return <div>Loading...</div>;
+  if (isChecking) return <Loader />;
 
   const isExpired = !token || isTokenExpired(token);
   if (isExpired) return <Navigate to="/Account/login" replace />;
@@ -103,7 +106,7 @@ const AuthPageWrapper = ({ children }) => {
     setIsChecking(false);
   }, []);
 
-  if (isChecking) return <div>Loading...</div>;
+  if (isChecking) return <Loader />;
 
   if (token && !isTokenExpired(token) && userRole) {
     switch (userRole) {
@@ -167,6 +170,8 @@ export default function App() {
           <Route path="Dashboard" element={<AdminDashboard />} />
           <Route path="Classes/Add" element={<AddClasses />} />
           <Route path="Classes/Manage" element={<ManageClasses />} />
+          <Route path="Students/Add" element={<AddStudents />} />
+          <Route path="Students/Manage" element={<ManageStudents />} />
           <Route index element={<Navigate to="Dashboard" replace />} />
         </Route>
 
