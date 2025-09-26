@@ -95,8 +95,8 @@ export default function AddClasses() {
   return (
     <div>
       <PageMeta
-        title="Add Classes | TailAdmin"
-        description="This is the Add Class page"
+        title="Add Classes | AE EduTracks"
+        description="This is where you can add classes"
       />
       <PageBreadcrumb pageTitle="Add Class" />
 

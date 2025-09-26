@@ -18,6 +18,7 @@ import Button from "../../../components/ui/button/Button";
 import Alert from "../../../components/ui/alert/Alert";
 import Select from "../../../components/form/Select";
 import ConfirmationModal from "../../../components/form/ConfirmationModal";
+import { useAuthStore } from "../../../hooks/useAuth";
 // 💡 Import the new component
 //mport ActionIcons from "../../../components/tables/BasicTables/ActionIcons"; // Adjust path as needed
 
@@ -29,7 +30,7 @@ export default function ManageClasses() {
   const [loading, setLoading] = useState(false);
   const { openModal } = useModal();
   const API_URL = import.meta.env.VITE_API_URL;
-  const token = localStorage.getItem("token");
+  const { token } = useAuthStore();
   const [selectedClass, setSelectedClass] = useState([]);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);

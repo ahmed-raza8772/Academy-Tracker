@@ -24,6 +24,8 @@ import Blank from "./pages/Blank";
 import AdminDashboard from "./pages/AdminPages/Home";
 import AddClasses from "./pages/AdminPages/relatedClasses/AddClasses";
 import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
+import AddStudents from "./pages/AdminPages/relatedStudents/AddStudents";
+import ManageStudents from "./pages/AdminPages/relatedStudents/ManageSudents";
 
 // Role-specific pages (you'll need to create these)
 // import StudentDashboard from "./pages/StudentPages/Home";
@@ -33,8 +35,7 @@ import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
 // Auth store
 import { useAuthStore } from "./hooks/useAuth";
 import Loader from "./components/common/Loader";
-import AddStudents from "./pages/AdminPages/relatedStudents/AddStudents";
-import ManageStudents from "./pages/AdminPages/relatedStudents/ManageSudents";
+import ViewStudent from "./pages/AdminPages/relatedStudents/ViewStudent";
 
 // --- Helpers ---
 function isTokenExpired(token) {
@@ -172,6 +173,8 @@ export default function App() {
           <Route path="Classes/Manage" element={<ManageClasses />} />
           <Route path="Students/Add" element={<AddStudents />} />
           <Route path="Students/Manage" element={<ManageStudents />} />
+          <Route path="Students/Add" element={<AddStudents />} />
+          <Route path="Students/:id" element={<ViewStudent />} />
           <Route index element={<Navigate to="Dashboard" replace />} />
         </Route>
 
