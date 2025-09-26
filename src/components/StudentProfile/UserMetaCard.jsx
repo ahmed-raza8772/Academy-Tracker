@@ -11,29 +11,33 @@ export default function UserMetaCard({ id }) {
 
   const { token } = useAuthStore();
   const API_URL = import.meta.env.VITE_API_URL;
-
   useEffect(() => {
     const fetchStudent = async () => {
       try {
         setLoading(true);
         setError(null);
+        setStudent(null);
 
-        // ✅ Fixed: Use the actual ID value
-        const response = await fetch(`${API_URL}/api/v1/student/?id=${id}`, {
+        const response = await fetch(`${API_URL}/api/v1/student`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) throw new Error("Failed to fetch student");
+        if (!response.ok) throw new Error("Failed to fetch students");
 
         const data = await response.json();
 
         if (Array.isArray(data) && data.length > 0) {
-          setStudent(data[0]);
+          const found = data.find((s) => String(s._id) === String(id));
+          if (found) {
+            setStudent(found);
+          } else {
+            throw new Error("Student not found");
+          }
         } else {
-          throw new Error("Student not found");
+          throw new Error("No students returned");
         }
       } catch (error) {
         console.error("Error fetching student details:", error);
@@ -44,7 +48,6 @@ export default function UserMetaCard({ id }) {
     };
 
     if (id) {
-      // ✅ Only fetch if id exists
       fetchStudent();
     } else {
       setLoading(false);

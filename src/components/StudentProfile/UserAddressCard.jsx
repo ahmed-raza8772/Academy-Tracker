@@ -5,6 +5,7 @@ import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../../hooks/useAuth";
+import Loader from "../common/Loader";
 
 export default function UserAddressCard({ id }) {
   const { isOpen, openModal, closeModal } = useModal();
@@ -20,22 +21,28 @@ export default function UserAddressCard({ id }) {
       try {
         setLoading(true);
         setError(null);
+        setStudent(null);
 
-        const response = await fetch(`${API_URL}/api/v1/student/?id=${id}`, {
+        const response = await fetch(`${API_URL}/api/v1/student`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) throw new Error("Failed to fetch student");
+        if (!response.ok) throw new Error("Failed to fetch students");
 
         const data = await response.json();
 
         if (Array.isArray(data) && data.length > 0) {
-          setStudent(data[0]);
+          const found = data.find((s) => String(s._id) === String(id));
+          if (found) {
+            setStudent(found);
+          } else {
+            throw new Error("Student not found");
+          }
         } else {
-          throw new Error("Student not found");
+          throw new Error("No students returned");
         }
       } catch (error) {
         console.error("Error fetching student details:", error);
@@ -70,15 +77,7 @@ export default function UserAddressCard({ id }) {
   };
 
   // Loading state
-  if (loading) {
-    return (
-      <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
-        <div className="flex justify-center">
-          <div className="text-gray-500">Loading contact information...</div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Loader />;
 
   // Error state
   if (error) {

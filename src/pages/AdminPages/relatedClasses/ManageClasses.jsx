@@ -366,7 +366,15 @@ export default function ManageClasses() {
                             {order.grade}
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                            {order.status ? "Active" : "Not Active"}
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                order.status
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                              }`}
+                            >
+                              {order.status ? "Active" : "Inactive"}
+                            </span>
                           </TableCell>
 
                           {/* 💡 Use the new component and pass handlers */}

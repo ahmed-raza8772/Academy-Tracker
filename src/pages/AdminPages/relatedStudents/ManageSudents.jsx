@@ -7,6 +7,8 @@ import { useAuthStore } from "../../../hooks/useAuth";
 import Input from "../../../components/form/input/InputField";
 import Label from "../../../components/form/Label";
 import Alert from "../../../components/ui/alert/Alert";
+
+import CustomDatePicker from "../../../components/form/input/DatePicker";
 import {
   Table,
   TableHeader,
@@ -77,6 +79,7 @@ export default function ManageStudents() {
       });
       const data = await response.json();
       setStudents(Array.isArray(data) ? data : []);
+      console.log(data);
     } catch (error) {
       console.error("Error fetching Students:", error);
     } finally {
@@ -515,7 +518,7 @@ export default function ManageStudents() {
         <Modal
           isOpen={isUpdateOpen}
           onClose={() => setIsUpdateOpen(false)}
-          className="max-w-4xl mx-4 max-h-[90vh]"
+          className="max-w-4xl mx-4 max-h-[100vh]"
         >
           <div className="relative w-full p-6 overflow-hidden bg-white rounded-xl shadow-2xl dark:bg-gray-800 lg:p-8">
             {/* Header */}
@@ -655,19 +658,23 @@ export default function ManageStudents() {
                         />
                       </div>
 
+                      {/* Replace this Input component with CustomDatePicker */}
                       <div>
                         <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                           Date of Birth
                         </Label>
-                        <Input
-                          type="date"
-                          name="birthday"
-                          value={
+                        <CustomDatePicker
+                          selected={
                             formData.birthday
-                              ? formData.birthday.split("T")[0]
-                              : ""
+                              ? new Date(formData.birthday)
+                              : null
                           }
-                          onChange={handleChange}
+                          onChange={(date) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              birthday: date ? date.toISOString() : "",
+                            }));
+                          }}
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         />
                       </div>
@@ -824,15 +831,18 @@ export default function ManageStudents() {
                         <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                           Date of Enrollment
                         </Label>
-                        <Input
-                          type="date"
-                          name="dateOfEnrollment"
-                          value={
+                        <CustomDatePicker
+                          selected={
                             formData.dateOfEnrollment
-                              ? formData.dateOfEnrollment.split("T")[0]
-                              : ""
+                              ? new Date(formData.dateOfEnrollment)
+                              : null
                           }
-                          onChange={handleChange}
+                          onChange={(date) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              dateOfEnrollment: date ? date : "",
+                            }));
+                          }}
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         />
                       </div>
