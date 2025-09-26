@@ -515,7 +515,7 @@ export default function ManageStudents() {
         <Modal
           isOpen={isUpdateOpen}
           onClose={() => setIsUpdateOpen(false)}
-          className="max-w-4xl mx-4"
+          className="max-w-4xl mx-4 max-h-[90vh]"
         >
           <div className="relative w-full p-6 overflow-hidden bg-white rounded-xl shadow-2xl dark:bg-gray-800 lg:p-8">
             {/* Header */}
@@ -537,14 +537,7 @@ export default function ManageStudents() {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                ></svg>
               </button>
             </div>
 
