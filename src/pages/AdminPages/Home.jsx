@@ -1,8 +1,8 @@
-import EcommerceMetrics from "../../components/ecommerce/EcommerceMetrics";
-import MonthlySalesChart from "../../components/ecommerce/MonthlySalesChart";
+import EduMetrics from "../../components/ecommerce/EduMetrics";
+import StudentPerformanceChart from "../../components/ecommerce/StudentPerformanceChart";
 import StatisticsChart from "../../components/ecommerce/StatisticsChart";
 import MonthlyTarget from "../../components/ecommerce/MonthlyTarget";
-import RecentOrders from "../../components/ecommerce/RecentOrders";
+import RecentActivity from "../../components/ecommerce/RecentActivity";
 import DemographicCard from "../../components/ecommerce/DemographicCard";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
@@ -12,14 +12,13 @@ export default function Home() {
     <>
       <PageMeta
         title="AE EduTrack | A Comprehensive Application to track your academics"
-        description=""
+        description="Admin dashboard for monitoring student performance, attendance, and institutional analytics"
       />
       <PageBreadcrumb pageTitle="Dashboard" />
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         <div className="col-span-12 space-y-6 xl:col-span-7">
-          <EcommerceMetrics />
-
-          <MonthlySalesChart />
+          <EduMetrics />
+          <StudentPerformanceChart />
         </div>
 
         <div className="col-span-12 xl:col-span-5">
@@ -35,7 +34,7 @@ export default function Home() {
         </div>
 
         <div className="col-span-12 xl:col-span-7">
-          <RecentOrders />
+          <RecentActivity />
         </div>
       </div>
     </>
