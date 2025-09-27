@@ -176,6 +176,20 @@ export default function ManageStudents() {
     }));
   };
 
+  const handleDateChange = (fieldName) => (syntheticEvent) => {
+    const date = syntheticEvent.target.value;
+    const dateString = date ? date.toISOString().split("T")[0] : "";
+
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: dateString,
+    }));
+  };
+
+  const getDateValue = (dateString) => {
+    return dateString ? new Date(dateString) : null;
+  };
+
   const handleUpdate = (student) => {
     setSelectedStudent(student);
     setFormData({
@@ -664,18 +678,10 @@ export default function ManageStudents() {
                           Date of Birth
                         </Label>
                         <CustomDatePicker
-                          selected={
-                            formData.birthday
-                              ? new Date(formData.birthday)
-                              : null
-                          }
-                          onChange={(date) => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              birthday: date ? date.toISOString() : "",
-                            }));
-                          }}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          selected={getDateValue(formData.birthday)}
+                          onChange={handleDateChange("birthday")}
+                          maxDate={new Date()}
+                          placeholderText="Select date of birth"
                         />
                       </div>
 
@@ -832,18 +838,10 @@ export default function ManageStudents() {
                           Date of Enrollment
                         </Label>
                         <CustomDatePicker
-                          selected={
-                            formData.dateOfEnrollment
-                              ? new Date(formData.dateOfEnrollment)
-                              : null
-                          }
-                          onChange={(date) => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              dateOfEnrollment: date ? date : "",
-                            }));
-                          }}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          selected={getDateValue(formData.dateOfEnrollment)}
+                          onChange={handleDateChange("dateOfEnrollment")}
+                          maxDate={new Date()}
+                          placeholderText="Select enrollment date"
                         />
                       </div>
 

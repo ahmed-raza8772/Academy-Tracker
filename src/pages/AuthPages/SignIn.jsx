@@ -6,13 +6,20 @@ import Loader from "../../components/common/Loader.jsx";
 import { useState } from "react";
 import { useAuthStore } from "../../hooks/useAuth";
 import { authService } from "../../services/auth/authServices.js";
+
 export default function SignIn() {
   const [Loading, setLoading] = useState(false);
+  // 🔥 1. State to hold and display error messages
+  const [errorMessage, setErrorMessage] = useState(null);
+
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
   const role = "Admin";
+
   const handleSignIn = async ({ email, password, remember }) => {
+    // Clear any previous error message on new attempt
+    setErrorMessage(null);
     setLoading(true);
 
     try {
@@ -20,8 +27,10 @@ export default function SignIn() {
 
       const { token } = data;
       console.log({ token });
+
       login(token, role, "admin", remember);
 
+      // Successful login navigation
       if (role === "Admin") {
         navigate("/Admin/Dashboard");
       } else if (role === "Student") {
@@ -34,18 +43,22 @@ export default function SignIn() {
         navigate("/");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Login failed:", err);
+      setErrorMessage(
+        err.message || "An unexpected error occurred during login."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   if (Loading) return <Loader />;
+
   return (
     <>
-      <PageMeta title="Academy Tracker" />
+      <PageMeta title="AE EduTrack | Sign In" />
       <AuthLayout>
-        <SignInForm onSubmit={handleSignIn} />
+        <SignInForm onSubmit={handleSignIn} errorMessage={errorMessage} />
       </AuthLayout>
     </>
   );

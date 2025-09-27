@@ -17,6 +17,9 @@ export default function AddStudents() {
   const { token } = useAuthStore();
   const [alert, setAlert] = useState(false);
 
+  // New state variables for field-specific validation errors
+  const [errors, setErrors] = useState({});
+
   const [formData, setFormData] = useState({
     // Personal Information
     studentId: "",
@@ -66,6 +69,11 @@ export default function AddStudents() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    // Clear error for the field being changed
+    setErrors((prev) => ({
+      ...prev,
+      [name]: null,
+    }));
   };
 
   // Handle date picker changes specifically
@@ -77,6 +85,11 @@ export default function AddStudents() {
     setFormData((prev) => ({
       ...prev,
       [fieldName]: dateString,
+    }));
+    // Clear error for the date field
+    setErrors((prev) => ({
+      ...prev,
+      [fieldName]: null,
     }));
   };
 
@@ -98,23 +111,58 @@ export default function AddStudents() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    let formValid = true;
+    const newErrors = {};
 
-    // Basic validation
+    // --- Start of Validation Logic ---
+
     if (!formData.studentId.trim()) {
+      newErrors.studentId = "Student ID is required!";
+      formValid = false;
+    }
+    if (!formData.englishFirst.trim()) {
+      newErrors.englishFirst = "English First Name is required!";
+      formValid = false;
+    }
+    if (!formData.englishLast.trim()) {
+      newErrors.englishLast = "English Last Name is required!";
+      formValid = false;
+    }
+    if (!formData.sex) {
+      newErrors.sex = "Gender is required!";
+      formValid = false;
+    }
+    if (!formData.grade.trim()) {
+      newErrors.grade = "Grade is required!";
+      formValid = false;
+    }
+    if (!formData.birthday) {
+      newErrors.birthday = "Date of Birth is required!";
+      formValid = false;
+    }
+    if (!formData.dateOfEnrollment) {
+      newErrors.dateOfEnrollment = "Date of Enrollment is required!";
+      formValid = false;
+    }
+    if (formData.status === "") {
+      newErrors.status = "Status is required!";
+      formValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!formValid) {
+      setAlert({
+        variant: "error",
+        title: "Validation Error",
+        message: "Please fill out all required fields marked in red.",
+      });
+      setTimeout(() => setAlert(null), 5000);
       setLoading(false);
       return;
     }
 
-    if (!formData.englishFirst.trim() || !formData.englishLast.trim()) {
-      setAlert({
-        variant: "info",
-        title: "Oops!",
-        message: "English name is required!",
-      });
-      setTimeout(() => setAlert(null), 3000);
-      setLoading(false);
-      return;
-    }
+    // --- End of Validation Logic ---
 
     try {
       // Prepare API data - FLAT STRUCTURE like the backend expects
@@ -215,7 +263,7 @@ export default function AddStudents() {
       setAlert({
         variant: "success",
         title: "Success",
-        message: `${formData.englishFirst} ${formData.englishLast}" added successfully!`,
+        message: `"${formData.englishFirst} ${formData.englishLast}" added successfully!`,
       });
       setTimeout(() => setAlert(null), 3000);
     } catch (error) {
@@ -311,6 +359,9 @@ export default function AddStudents() {
                     onChange={handleChange}
                     placeholder="STU20250923001"
                     required
+                    // 🔥 MODIFICATION: Pass error state and hint
+                    error={!!errors.studentId}
+                    hint={errors.studentId}
                   />
                 </div>
 
@@ -336,6 +387,9 @@ export default function AddStudents() {
                     onChange={handleChange}
                     placeholder="5"
                     required
+                    // 🔥 MODIFICATION: Pass error state and hint
+                    error={!!errors.grade}
+                    hint={errors.grade}
                   />
                 </div>
 
@@ -351,6 +405,9 @@ export default function AddStudents() {
                     onChange={handleChange}
                     placeholder="Jeffery"
                     required
+                    // 🔥 MODIFICATION: Pass error state and hint
+                    error={!!errors.englishFirst}
+                    hint={errors.englishFirst}
                   />
                 </div>
 
@@ -366,6 +423,9 @@ export default function AddStudents() {
                     onChange={handleChange}
                     placeholder="Epstein"
                     required
+                    // 🔥 MODIFICATION: Pass error state and hint
+                    error={!!errors.englishLast}
+                    hint={errors.englishLast}
                   />
                 </div>
 
@@ -402,13 +462,24 @@ export default function AddStudents() {
                     name="sex"
                     value={formData.sex}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    // 🔥 MODIFICATION: Apply error styles to the select element
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                      errors.sex
+                        ? "border-error-500 focus:ring-error-500/20 dark:border-error-500"
+                        : "border-gray-200 focus:ring-blue-500 dark:border-gray-600"
+                    }`}
                     required
                   >
                     <option value="">Select Gender</option>
                     <option value="M">Male</option>
                     <option value="F">Female</option>
                   </select>
+                  {/* 🔥 MODIFICATION: Show hint for select element */}
+                  {errors.sex && (
+                    <p className="mt-1.5 text-xs text-error-500">
+                      {errors.sex}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -420,13 +491,17 @@ export default function AddStudents() {
                     required
                     maxDate={new Date()}
                     placeholderText="Select date of birth"
+                    // 🔥 MODIFICATION: Pass error state to CustomDatePicker (assuming it supports it)
+                    error={!!errors.birthday}
+                    hint={errors.birthday}
                   />
                 </div>
               </div>
             </section>
 
-            {/* Contact Information Section */}
+            {/* Contact Information Section (No changes needed, all are optional) */}
             <section className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
+              {/* ... (Contact Information content is unchanged) ... */}
               <div className="flex items-center mb-6">
                 <div className="flex items-center justify-center w-10 h-10 mr-4 bg-green-100 rounded-xl dark:bg-green-900/30">
                   <svg
@@ -557,6 +632,9 @@ export default function AddStudents() {
                     required
                     maxDate={new Date()}
                     placeholderText="Select enrollment date"
+                    // 🔥 MODIFICATION: Pass error state to CustomDatePicker
+                    error={!!errors.dateOfEnrollment}
+                    hint={errors.dateOfEnrollment}
                   />
                 </div>
 
@@ -569,12 +647,23 @@ export default function AddStudents() {
                     name="status"
                     value={formData.status}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    // 🔥 MODIFICATION: Apply error styles to the select element
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                      errors.status
+                        ? "border-error-500 focus:ring-error-500/20 dark:border-error-500"
+                        : "border-gray-200 focus:ring-blue-500 dark:border-gray-600"
+                    }`}
                     required
                   >
                     <option value={true}>Active</option>
                     <option value={false}>Inactive</option>
                   </select>
+                  {/* 🔥 MODIFICATION: Show hint for select element */}
+                  {errors.status && (
+                    <p className="mt-1.5 text-xs text-error-500">
+                      {errors.status}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -605,6 +694,7 @@ export default function AddStudents() {
 
             {/* Attendance Days Section */}
             <section className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
+              {/* ... (Attendance Days content is unchanged) ... */}
               <div className="flex items-center mb-6">
                 <div className="flex items-center justify-center w-10 h-10 mr-4 bg-orange-100 rounded-xl dark:bg-orange-900/30">
                   <svg
@@ -663,6 +753,7 @@ export default function AddStudents() {
 
             {/* Additional Information Section */}
             <section className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
+              {/* ... (Additional Information content is unchanged) ... */}
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <Label htmlFor="notes">Additional Notes</Label>

@@ -7,18 +7,51 @@ import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
 import logo from "../../assets/images/logo/logo.svg";
 import logodark from "../../assets/images/logo/logo-dark.svg";
+import Alert from "../ui/alert/Alert";
 
-export default function SignInForm({ onSubmit }) {
+// 🔥 MODIFICATION 1: Accept the errorMessage prop
+export default function SignInForm({ onSubmit, errorMessage }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [alert, setAlert] = useState(false);
 
+  const [passEmpty, setPassEmpty] = useState(false);
+  const [emailEmpty, setEmailEmpty] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // NOTE: You might want to also clear the server error when the user starts typing
+  // For simplicity, we'll let the parent component handle clearing it on a new submit attempt.
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Reset previous single-field errors
+    setEmailEmpty(false);
+    setPassEmpty(false);
+
+    // Clear the full-form client-side alert on new attempt
+    setAlert(null);
+
     if (onSubmit) {
-      onSubmit({ email, password, remember: isChecked });
+      if (!email.trim() && !password.trim()) {
+        // Both fields empty - show the full alert
+        setAlert({
+          variant: "error",
+          title: "Oops!",
+          message: "Email and Password are required!",
+        });
+
+        setTimeout(() => setAlert(null), 3000);
+      } else if (!email.trim()) {
+        setEmailEmpty(true);
+        setTimeout(() => setEmailEmpty(false), 3000);
+      } else if (!password.trim()) {
+        setPassEmpty(true);
+        setTimeout(() => setPassEmpty(false), 3000);
+      } else {
+        onSubmit({ email, password, remember: isChecked });
+      }
     }
   };
 
@@ -34,13 +67,37 @@ export default function SignInForm({ onSubmit }) {
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
-            <h1 className="mb-2  font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
+            <h1 className="mb-2  font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Sign In
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Enter your email and password to sign in!
             </p>
           </div>
+
+          {/* 🔥 MODIFICATION 2: Render the server-side error message */}
+          {errorMessage && (
+            <div className="mb-4">
+              <Alert
+                variant="error"
+                title="Login Failed!"
+                message={errorMessage}
+                showLink={false}
+              />
+            </div>
+          )}
+
+          {/* Existing client-side validation error display */}
+          {alert && (
+            <div className="mb-4">
+              <Alert
+                variant={alert.variant}
+                title={alert.title}
+                message={alert.message}
+                showLink={false}
+              />
+            </div>
+          )}
 
           {/* Divider */}
           <div className="relative py-3 sm:py-5">
@@ -62,6 +119,8 @@ export default function SignInForm({ onSubmit }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="info@gmail.com"
+                  error={emailEmpty}
+                  hint={emailEmpty ? "Email is Required!" : ""}
                   required
                 />
               </div>
@@ -76,6 +135,8 @@ export default function SignInForm({ onSubmit }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
+                    error={passEmpty}
+                    hint={passEmpty ? "Password is Required!" : ""}
                     required
                   />
                   <span

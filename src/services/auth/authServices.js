@@ -16,12 +16,21 @@ class AuthService {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Login failed");
+        // 🔥 ENHANCEMENT: Check for specific unauthorized status (401)
+        if (res.status === 401) {
+          throw new Error("Invalid email or password. Please try again.");
+        }
+
+        // Fallback to the server's error message (e.g., from a 400 Bad Request)
+        throw new Error(
+          data.message || "Login failed. Please check your network connection."
+        );
       }
 
       return data;
     } catch (err) {
       console.error("AuthService login error:", err);
+      // Re-throw the error so the calling function can catch it and display it to the user
       throw err;
     }
   }
