@@ -26,7 +26,7 @@ class AuthService {
           data.message || "Login failed. Please check your network connection."
         );
       }
-
+      console.log(data.message);
       return data;
     } catch (err) {
       console.error("AuthService login error:", err);

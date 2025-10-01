@@ -18,19 +18,25 @@ export default function SignIn() {
   const role = "Admin";
 
   const handleSignIn = async ({ email, password, remember }) => {
-    // Clear any previous error message on new attempt
     setErrorMessage(null);
     setLoading(true);
 
     try {
+      console.log("1. Starting login process with email:", email);
+
       const data = await authService.login(email, password);
+      console.log("2. AuthService response:", data);
 
       const { token } = data;
-      console.log({ token });
+      console.log("3. Token received:", token);
 
-      login(token, role, "admin", remember);
+      // Check if login function exists and call it
+      console.log("4. Calling login function...");
+      login(token, role, "admin123", remember);
+      console.log("5. Login function completed");
 
       // Successful login navigation
+      console.log("6. Navigating based on role:", role);
       if (role === "Admin") {
         navigate("/Admin/Dashboard");
       } else if (role === "Student") {
@@ -42,6 +48,7 @@ export default function SignIn() {
       } else {
         navigate("/");
       }
+      console.log("7. Navigation triggered");
     } catch (err) {
       console.error("Login failed:", err);
       setErrorMessage(
@@ -51,7 +58,6 @@ export default function SignIn() {
       setLoading(false);
     }
   };
-
   if (Loading) return <Loader />;
 
   return (

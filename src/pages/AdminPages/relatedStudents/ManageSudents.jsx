@@ -7,7 +7,6 @@ import { useAuthStore } from "../../../hooks/useAuth";
 import Input from "../../../components/form/input/InputField";
 import Label from "../../../components/form/Label";
 import Alert from "../../../components/ui/alert/Alert";
-
 import CustomDatePicker from "../../../components/form/input/DatePicker";
 import {
   Table,
@@ -20,11 +19,17 @@ import ConfirmationModal from "../../../components/form/ConfirmationModal";
 import { Modal } from "../../../components/ui/modal";
 import Button from "../../../components/ui/button/Button";
 import { useNavigate } from "react-router";
+import MultiSelect from "../../../components/form/MultiSelect";
+import FileInput from "../../../components/form/input/FileInput";
 
 export default function ManageStudents() {
   const { token } = useAuthStore();
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [buses, setBuses] = useState([]);
+  const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
@@ -34,7 +39,21 @@ export default function ManageStudents() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+
+  // Transform classes data for MultiSelect
+  const classOptions = classes.map((cls) => ({
+    value: cls._id,
+    text: cls.className,
+  }));
+
+  // Transform courses data for MultiSelect
+  const courseOptions = courses.map((crs) => ({
+    value: crs._id,
+    text: crs.courseName,
+  }));
+
   const [formData, setFormData] = useState({
+    // Personal Information
     studentId: "",
     englishFirst: "",
     englishLast: "",
@@ -42,18 +61,33 @@ export default function ManageStudents() {
     koreanGiven: "",
     sex: "",
     birthday: "",
-    grade: "",
+
+    // Contact Information - Updated to match backend structure
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "South Korea",
+    },
     studentPhone: "",
     motherPhone: "",
     fatherPhone: "",
     studentEmail: "",
     parentEmail: "",
+
+    // School Information
+    school: "",
+
+    // Enrollment Information
     dateOfEnrollment: "",
-    classRef: "",
+    classRef: [],
+    courses: [],
+    classes: [],
     daysPreset: "",
     status: true,
-    draft: false,
-    notes: "",
+
+    // Attendance Days
     days: {
       M: false,
       T: false,
@@ -63,9 +97,39 @@ export default function ManageStudents() {
       Sat: false,
       Sun: false,
     },
+
+    // Additional
+    notes: "",
+    transportType: "walk",
+    bus: "",
   });
 
   const API_URL = import.meta.env.VITE_API_URL;
+
+  // Hardcoded schools data
+  const hardcodedSchools = [
+    {
+      _id: "school1",
+      schoolName: "Seoul International School",
+      address: "123 Gangnam-gu, Seoul",
+      phone: "+82-2-123-4567",
+      email: "info@seoulis.edu",
+    },
+    {
+      _id: "school2",
+      schoolName: "Busan Global Academy",
+      address: "456 Haeundae-gu, Busan",
+      phone: "+82-51-765-4321",
+      email: "contact@busanglobal.edu",
+    },
+    {
+      _id: "school3",
+      schoolName: "Daegu English Academy",
+      address: "789 Jung-gu, Daegu",
+      phone: "+82-53-888-9999",
+      email: "admin@daeguenglish.edu",
+    },
+  ];
 
   const fetchStudents = async () => {
     try {
@@ -79,7 +143,6 @@ export default function ManageStudents() {
       });
       const data = await response.json();
       setStudents(Array.isArray(data) ? data : []);
-      console.log(data);
     } catch (error) {
       console.error("Error fetching Students:", error);
     } finally {
@@ -87,8 +150,65 @@ export default function ManageStudents() {
     }
   };
 
+  const fetchClasses = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/Class/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setClasses(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/course/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setCourses(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching Courses:", error);
+    }
+  };
+
+  const fetchBuses = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/bus/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setBuses(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching buses:", error);
+      setBuses([
+        { _id: "bus1", busName: "Bus 1", route: "Route A" },
+        { _id: "bus2", busName: "Bus 2", route: "Route B" },
+        { _id: "bus3", busName: "Bus 3", route: "Route C" },
+      ]);
+    }
+  };
+
   useEffect(() => {
     fetchStudents();
+    fetchClasses();
+    fetchCourses();
+    fetchBuses();
+    setSchools(hardcodedSchools);
   }, [API_URL, token]);
 
   const handleView = (id) => {
@@ -158,11 +278,37 @@ export default function ManageStudents() {
     }
   };
 
+  // Handle regular input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    setFormData((prev) => {
+      const newFormData = {
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      };
+
+      // Improved transportType logic
+      if (name === "transportType") {
+        if (value === "walk") {
+          newFormData.bus = "";
+        } else if (value === "bus" && !prev.bus && buses.length > 0) {
+          newFormData.bus = buses[0]._id;
+        }
+      }
+
+      return newFormData;
+    });
+  };
+
+  // Handle address field changes
+  const handleAddressChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      address: {
+        ...prev.address,
+        [field]: value,
+      },
     }));
   };
 
@@ -186,32 +332,83 @@ export default function ManageStudents() {
     }));
   };
 
+  // Handle class selection
+  const handleClassSelection = (selectedClassIds) => {
+    const selectedClassNames = selectedClassIds
+      .map((classId) => {
+        const selectedClass = classes.find((cls) => cls._id === classId);
+        return selectedClass ? selectedClass.className : "";
+      })
+      .filter((name) => name !== "");
+
+    setFormData((prev) => ({
+      ...prev,
+      classRef: selectedClassIds,
+      classes: selectedClassNames,
+    }));
+  };
+
+  const handleCourseSelection = (selectedCourseIds) => {
+    setFormData((prev) => ({
+      ...prev,
+      courses: selectedCourseIds,
+    }));
+  };
+
   const getDateValue = (dateString) => {
     return dateString ? new Date(dateString) : null;
   };
 
   const handleUpdate = (student) => {
     setSelectedStudent(student);
+
+    // Parse the student data to match the form structure
+    const address = student.address || {
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "South Korea",
+    };
+
     setFormData({
+      // Personal Information
       studentId: student.studentId || "",
       englishFirst: student.englishFirst || "",
       englishLast: student.englishLast || "",
       koreanFamily: student.koreanFamily || "",
       koreanGiven: student.koreanGiven || "",
       sex: student.sex || "",
-      birthday: student.birthday || "",
-      grade: student.grade || "",
+      birthday: student.birthday ? student.birthday.split("T")[0] : "",
+
+      // Contact Information - Updated structure
+      address: {
+        street: address.street || "",
+        city: address.city || "",
+        state: address.state || "",
+        postalCode: address.postalCode || "",
+        country: address.country || "South Korea",
+      },
       studentPhone: student.studentPhone || "",
       motherPhone: student.motherPhone || "",
       fatherPhone: student.fatherPhone || "",
       studentEmail: student.studentEmail || "",
       parentEmail: student.parentEmail || "",
-      dateOfEnrollment: student.dateOfEnrollment || "",
-      classRef: student.classRef || "",
+
+      // School Information
+      school: student.school || "",
+
+      // Enrollment Information
+      dateOfEnrollment: student.dateOfEnrollment
+        ? student.dateOfEnrollment.split("T")[0]
+        : "",
+      classRef: student.classRef || [],
+      courses: student.courses || [],
+      classes: student.classes || [],
       daysPreset: student.daysPreset || "",
       status: student.status !== undefined ? student.status : true,
-      draft: student.draft !== undefined ? student.draft : false,
-      notes: student.notes || "",
+
+      // Attendance Days
       days: student.days || {
         M: false,
         T: false,
@@ -221,6 +418,11 @@ export default function ManageStudents() {
         Sat: false,
         Sun: false,
       },
+
+      // Additional
+      notes: student.notes || "",
+      transportType: student.transportType || "walk",
+      bus: student.bus || "",
     });
     setIsUpdateOpen(true);
   };
@@ -230,6 +432,56 @@ export default function ManageStudents() {
 
     setLoading(true);
     try {
+      // Prepare API data - Updated to match backend structure
+      const apiData = {
+        studentId: formData.studentId.trim(),
+        englishFirst: formData.englishFirst.trim(),
+        englishLast: formData.englishLast.trim(),
+        koreanFamily: formData.koreanFamily.trim() || undefined,
+        koreanGiven: formData.koreanGiven.trim() || undefined,
+        sex: formData.sex,
+        birthday: formData.birthday
+          ? `${formData.birthday}T00:00:00.000Z`
+          : undefined,
+
+        address: {
+          street: formData.address.street.trim(),
+          city: formData.address.city.trim(),
+          state: formData.address.state.trim(),
+          postalCode: formData.address.postalCode.trim(),
+          country: formData.address.country || "South Korea",
+        },
+
+        studentPhone: formData.studentPhone?.trim() || undefined,
+        motherPhone: formData.motherPhone?.trim() || undefined,
+        fatherPhone: formData.fatherPhone?.trim() || undefined,
+        studentEmail: formData.studentEmail?.trim() || undefined,
+        parentEmail: formData.parentEmail?.trim() || undefined,
+
+        dateOfEnrollment: formData.dateOfEnrollment
+          ? `${formData.dateOfEnrollment}T00:00:00.000Z`
+          : undefined,
+        classRef: formData.classRef,
+        courses: formData.courses,
+        daysPreset: formData.daysPreset?.trim() || undefined,
+        status: formData.status,
+        days: formData.days,
+        notes: formData.notes?.trim() || undefined,
+        transportType: formData.transportType,
+        bus: formData.transportType === "bus" ? formData.bus : undefined,
+      };
+
+      // Clean undefined values
+      const cleanData = JSON.parse(
+        JSON.stringify(apiData, (key, value) => {
+          if (value === null || value === undefined || value === "")
+            return undefined;
+          return value;
+        })
+      );
+
+      console.log("API Update Data:", cleanData);
+
       const response = await fetch(
         `${API_URL}/api/v1/student/${selectedStudent._id}`,
         {
@@ -238,7 +490,7 @@ export default function ManageStudents() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(cleanData),
         }
       );
 
@@ -528,7 +780,7 @@ export default function ManageStudents() {
           </div>
         </ComponentCard>
 
-        {/* Update Modal */}
+        {/* Update Modal - UPDATED TO MATCH ADD STUDENT STRUCTURE */}
         <Modal
           isOpen={isUpdateOpen}
           onClose={() => setIsUpdateOpen(false)}
@@ -554,7 +806,14 @@ export default function ManageStudents() {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                ></svg>
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             </div>
 
@@ -564,10 +823,10 @@ export default function ManageStudents() {
                 <div className="space-y-8">
                   {/* Personal Information Section */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
-                    <div className="flex items-center mb-4">
-                      <div className="flex items-center justify-center w-8 h-8 mr-3 bg-blue-100 rounded-lg dark:bg-blue-900/30">
+                    <div className="flex items-center mb-6">
+                      <div className="flex items-center justify-center w-10 h-10 mr-4 bg-blue-100 rounded-xl dark:bg-blue-900/30">
                         <svg
-                          className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                          className="w-5 h-5 text-blue-600 dark:text-blue-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -580,35 +839,98 @@ export default function ManageStudents() {
                           />
                         </svg>
                       </div>
-                      <h5 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Personal Information
-                      </h5>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          Personal Information
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          Basic student details and identification
+                        </p>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <Label htmlFor="studentId" required>
                           Student ID
                         </Label>
                         <Input
+                          id="studentId"
                           type="text"
                           name="studentId"
                           value={formData.studentId}
                           onChange={handleChange}
                           placeholder="STU20250923001"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         />
                       </div>
 
                       <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <Label htmlFor="image">Student Image</Label>
+                        <FileInput id="image" type="file" name="image" />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="englishFirst" required>
+                          English First Name
+                        </Label>
+                        <Input
+                          id="englishFirst"
+                          type="text"
+                          name="englishFirst"
+                          value={formData.englishFirst}
+                          onChange={handleChange}
+                          placeholder="Jeffery"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="englishLast" required>
+                          English Last Name
+                        </Label>
+                        <Input
+                          id="englishLast"
+                          type="text"
+                          name="englishLast"
+                          value={formData.englishLast}
+                          onChange={handleChange}
+                          placeholder="Epstein"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="koreanFamily">Korean Family Name</Label>
+                        <Input
+                          id="koreanFamily"
+                          type="text"
+                          name="koreanFamily"
+                          value={formData.koreanFamily}
+                          onChange={handleChange}
+                          placeholder="김"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="koreanGiven">Korean Given Name</Label>
+                        <Input
+                          id="koreanGiven"
+                          type="text"
+                          name="koreanGiven"
+                          value={formData.koreanGiven}
+                          onChange={handleChange}
+                          placeholder="철수"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="sex" required>
                           Gender
                         </Label>
                         <select
+                          id="sex"
                           name="sex"
                           value={formData.sex}
                           onChange={handleChange}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         >
                           <option value="">Select Gender</option>
                           <option value="M">Male</option>
@@ -617,96 +939,76 @@ export default function ManageStudents() {
                       </div>
 
                       <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          English First Name
-                        </Label>
-                        <Input
-                          type="text"
-                          name="englishFirst"
-                          value={formData.englishFirst}
-                          onChange={handleChange}
-                          placeholder="John"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
-
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          English Last Name
-                        </Label>
-                        <Input
-                          type="text"
-                          name="englishLast"
-                          value={formData.englishLast}
-                          onChange={handleChange}
-                          placeholder="Doe"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
-
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Korean Family Name
-                        </Label>
-                        <Input
-                          type="text"
-                          name="koreanFamily"
-                          value={formData.koreanFamily}
-                          onChange={handleChange}
-                          placeholder="김"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
-
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Korean Given Name
-                        </Label>
-                        <Input
-                          type="text"
-                          name="koreanGiven"
-                          value={formData.koreanGiven}
-                          onChange={handleChange}
-                          placeholder="철수"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
-
-                      {/* Replace this Input component with CustomDatePicker */}
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Date of Birth
-                        </Label>
                         <CustomDatePicker
+                          label="Date of Birth"
+                          name="birthday"
                           selected={getDateValue(formData.birthday)}
                           onChange={handleDateChange("birthday")}
+                          required
                           maxDate={new Date()}
                           placeholderText="Select date of birth"
-                        />
-                      </div>
-
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Grade
-                        </Label>
-                        <Input
-                          type="text"
-                          name="grade"
-                          value={formData.grade}
-                          onChange={handleChange}
-                          placeholder="5"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Contact Information Section */}
+                  {/* School Information Section */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
-                    <div className="flex items-center mb-4">
-                      <div className="flex items-center justify-center w-8 h-8 mr-3 bg-green-100 rounded-lg dark:bg-green-900/30">
+                    <div className="flex items-center mb-6">
+                      <div className="flex items-center justify-center w-10 h-10 mr-4 bg-indigo-100 rounded-xl dark:bg-indigo-900/30">
                         <svg
-                          className="w-4 h-4 text-green-600 dark:text-green-400"
+                          className="w-5 h-5 text-indigo-600 dark:text-indigo-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          School Information
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          Select the student's school
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6">
+                      <div>
+                        <Label htmlFor="school" required>
+                          School
+                        </Label>
+                        <select
+                          id="school"
+                          name="school"
+                          value={formData.school}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        >
+                          <option value="">Select a School</option>
+                          {schools.map((school) => (
+                            <option key={school._id} value={school._id}>
+                              {school.schoolName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Information Section - UPDATED */}
+                  <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
+                    <div className="flex items-center mb-6">
+                      <div className="flex items-center justify-center w-10 h-10 mr-4 bg-green-100 rounded-xl dark:bg-green-900/30">
+                        <svg
+                          className="w-5 h-5 text-green-600 dark:text-green-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -719,90 +1021,160 @@ export default function ManageStudents() {
                           />
                         </svg>
                       </div>
-                      <h5 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Contact Information
-                      </h5>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          Contact Information
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          Student and parent contact details
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                      <div>
+                    <div className="grid grid-cols-1 gap-6">
+                      {/* Address Section */}
+                      <div className="sm:col-span-2">
                         <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Student Phone
+                          Address
                         </Label>
-                        <Input
-                          type="tel"
-                          name="studentPhone"
-                          value={formData.studentPhone}
-                          onChange={handleChange}
-                          placeholder="+82 10-1234-5678"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <Label htmlFor="street" required>
+                              Street
+                            </Label>
+                            <Input
+                              id="street"
+                              type="text"
+                              name="street"
+                              value={formData.address.street}
+                              onChange={(e) =>
+                                handleAddressChange("street", e.target.value)
+                              }
+                              placeholder="Sector A, Gangnam-gu"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="city" required>
+                              City
+                            </Label>
+                            <Input
+                              id="city"
+                              type="text"
+                              name="city"
+                              value={formData.address.city}
+                              onChange={(e) =>
+                                handleAddressChange("city", e.target.value)
+                              }
+                              placeholder="Seoul"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="state" required>
+                              State/Province
+                            </Label>
+                            <Input
+                              id="state"
+                              type="text"
+                              name="state"
+                              value={formData.address.state}
+                              onChange={(e) =>
+                                handleAddressChange("state", e.target.value)
+                              }
+                              placeholder="Seoul"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="postalCode" required>
+                              Postal Code
+                            </Label>
+                            <Input
+                              id="postalCode"
+                              type="text"
+                              name="postalCode"
+                              value={formData.address.postalCode}
+                              onChange={(e) =>
+                                handleAddressChange(
+                                  "postalCode",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="60000"
+                            />
+                          </div>
+                        </div>
                       </div>
 
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Mother's Phone
-                        </Label>
-                        <Input
-                          type="tel"
-                          name="motherPhone"
-                          value={formData.motherPhone}
-                          onChange={handleChange}
-                          placeholder="+82 10-9876-5432"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
+                      {/* Contact Details */}
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:col-span-2">
+                        <div>
+                          <Label htmlFor="studentPhone">Student Phone</Label>
+                          <Input
+                            id="studentPhone"
+                            type="tel"
+                            name="studentPhone"
+                            value={formData.studentPhone}
+                            onChange={handleChange}
+                            placeholder="+82 10-1234-5678"
+                          />
+                        </div>
 
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Father's Phone
-                        </Label>
-                        <Input
-                          type="tel"
-                          name="fatherPhone"
-                          value={formData.fatherPhone}
-                          onChange={handleChange}
-                          placeholder="+82 10-5555-7777"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
+                        <div>
+                          <Label htmlFor="studentEmail">Student Email</Label>
+                          <Input
+                            id="studentEmail"
+                            type="email"
+                            name="studentEmail"
+                            value={formData.studentEmail}
+                            onChange={handleChange}
+                            placeholder="student@example.com"
+                          />
+                        </div>
 
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Student Email
-                        </Label>
-                        <Input
-                          type="email"
-                          name="studentEmail"
-                          value={formData.studentEmail}
-                          onChange={handleChange}
-                          placeholder="student@example.com"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
+                        <div>
+                          <Label htmlFor="motherPhone">Mother's Phone</Label>
+                          <Input
+                            id="motherPhone"
+                            type="tel"
+                            name="motherPhone"
+                            value={formData.motherPhone}
+                            onChange={handleChange}
+                            placeholder="+82 10-9876-5432"
+                          />
+                        </div>
 
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Parent Email
-                        </Label>
-                        <Input
-                          type="email"
-                          name="parentEmail"
-                          value={formData.parentEmail}
-                          onChange={handleChange}
-                          placeholder="parent@example.com"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
+                        <div>
+                          <Label htmlFor="fatherPhone">Father's Phone</Label>
+                          <Input
+                            id="fatherPhone"
+                            type="tel"
+                            name="fatherPhone"
+                            value={formData.fatherPhone}
+                            onChange={handleChange}
+                            placeholder="+82 10-5555-7777"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <Label htmlFor="parentEmail">Parent Email</Label>
+                          <Input
+                            id="parentEmail"
+                            type="email"
+                            name="parentEmail"
+                            value={formData.parentEmail}
+                            onChange={handleChange}
+                            placeholder="parent@example.com"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Enrollment Information Section */}
+                  {/* Enrollment Information Section - UPDATED */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
-                    <div className="flex items-center mb-4">
-                      <div className="flex items-center justify-center w-8 h-8 mr-3 bg-purple-100 rounded-lg dark:bg-purple-900/30">
+                    <div className="flex items-center mb-6">
+                      <div className="flex items-center justify-center w-10 h-10 mr-4 bg-purple-100 rounded-xl dark:bg-purple-900/30">
                         <svg
-                          className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                          className="w-5 h-5 text-purple-600 dark:text-purple-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -813,78 +1185,138 @@ export default function ManageStudents() {
                             strokeWidth={2}
                             d="M12 14l9-5-9-5-9 5 9 5z"
                           />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 14l9-5-9-5-9 5 9 5z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 14v6l9-5M12 14v6l-9-5"
-                          />
                         </svg>
                       </div>
-                      <h5 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Enrollment Information
-                      </h5>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          Enrollment Information
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          Class and enrollment details
+                        </p>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <Label htmlFor="dateOfEnrollment" required>
                           Date of Enrollment
                         </Label>
                         <CustomDatePicker
+                          label=""
+                          name="dateOfEnrollment"
                           selected={getDateValue(formData.dateOfEnrollment)}
                           onChange={handleDateChange("dateOfEnrollment")}
+                          required
                           maxDate={new Date()}
                           placeholderText="Select enrollment date"
                         />
                       </div>
 
                       <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <Label htmlFor="status" required>
                           Status
                         </Label>
                         <select
+                          id="status"
                           name="status"
                           value={formData.status}
                           onChange={handleChange}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         >
                           <option value={true}>Active</option>
                           <option value={false}>Inactive</option>
                         </select>
                       </div>
 
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Class Reference
+                      {/* Class Selection */}
+                      <div className="sm:col-span-2">
+                        <Label htmlFor="classRef" required>
+                          Classes
                         </Label>
-                        <Input
-                          type="text"
-                          name="classRef"
-                          value={formData.classRef}
-                          onChange={handleChange}
-                          placeholder="68d16818fefbeae4346fd5d3"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        <MultiSelect
+                          label=""
+                          options={classOptions}
+                          defaultSelected={formData.classRef}
+                          onChange={handleClassSelection}
+                          disabled={false}
+                          hideSelectedItems={true}
                         />
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          Select one or more classes for this student
+                        </p>
+
+                        {/* Display selected classes for confirmation */}
+                        {formData.classRef.length > 0 && (
+                          <div className="mt-3 p-3 bg-green-50 rounded-lg dark:bg-green-900/20">
+                            <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                              Selected Classes:
+                            </p>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {formData.classes.map((className, index) => (
+                                <span
+                                  key={index}
+                                  className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-md dark:bg-green-800/30 dark:text-green-200"
+                                >
+                                  {className}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Course Selection */}
+                      <div className="sm:col-span-2">
+                        <Label htmlFor="courses" required>
+                          Courses
+                        </Label>
+                        <MultiSelect
+                          label=""
+                          options={courseOptions}
+                          defaultSelected={formData.courses}
+                          onChange={handleCourseSelection}
+                          disabled={false}
+                          hideSelectedItems={true}
+                        />
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          Select one or more courses for this student
+                        </p>
+
+                        {/* Display selected courses for confirmation */}
+                        {formData.courses.length > 0 && (
+                          <div className="mt-3 p-3 bg-green-50 rounded-lg dark:bg-green-900/20">
+                            <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                              Selected Courses:
+                            </p>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {formData.courses.map((courseId, index) => {
+                                const course = courses.find(
+                                  (c) => c._id === courseId
+                                );
+                                return course ? (
+                                  <span
+                                    key={index}
+                                    className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-md dark:bg-green-800/30 dark:text-green-200"
+                                  >
+                                    {course.courseName}
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Days Preset
-                        </Label>
+                        <Label htmlFor="daysPreset">Days Preset</Label>
                         <Input
+                          id="daysPreset"
                           type="text"
                           name="daysPreset"
                           value={formData.daysPreset}
                           onChange={handleChange}
                           placeholder="Mon–Fri"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                         />
                       </div>
                     </div>
@@ -892,10 +1324,10 @@ export default function ManageStudents() {
 
                   {/* Attendance Days Section */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
-                    <div className="flex items-center mb-4">
-                      <div className="flex items-center justify-center w-8 h-8 mr-3 bg-orange-100 rounded-lg dark:bg-orange-900/30">
+                    <div className="flex items-center mb-6">
+                      <div className="flex items-center justify-center w-10 h-10 mr-4 bg-orange-100 rounded-xl dark:bg-orange-900/30">
                         <svg
-                          className="w-4 h-4 text-orange-600 dark:text-orange-400"
+                          className="w-5 h-5 text-orange-600 dark:text-orange-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -908,12 +1340,17 @@ export default function ManageStudents() {
                           />
                         </svg>
                       </div>
-                      <h5 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Attendance Days
-                      </h5>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          Attendance Days
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          Select the days student will attend
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-7">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-7">
                       {[
                         { key: "M", label: "Mon" },
                         { key: "T", label: "Tue" },
@@ -925,11 +1362,11 @@ export default function ManageStudents() {
                       ].map((day) => (
                         <label
                           key={day.key}
-                          className="flex flex-col items-center p-3 transition-colors bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
+                          className="flex flex-col items-center p-3 transition-all bg-white border border-gray-200 rounded-lg cursor-pointer hover:shadow-md dark:bg-gray-700 dark:border-gray-600"
                         >
                           <input
                             type="checkbox"
-                            checked={formData.days?.[day.key] || false}
+                            checked={formData.days[day.key]}
                             onChange={(e) =>
                               handleDaysChange(day.key, e.target.checked)
                             }
@@ -943,36 +1380,59 @@ export default function ManageStudents() {
                     </div>
                   </div>
 
-                  {/* Additional Information */}
+                  {/* Additional Information Section */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
                     <div className="grid grid-cols-1 gap-6">
                       <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Notes
-                        </Label>
+                        <Label htmlFor="notes">Additional Notes</Label>
                         <textarea
+                          id="notes"
                           name="notes"
                           value={formData.notes}
                           onChange={handleChange}
-                          rows="3"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          placeholder="Allergic to peanuts. Needs special attention."
+                          rows="4"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          placeholder="Allergic to peanuts. Needs special attention. Any other relevant information..."
                         />
                       </div>
 
-                      <div>
-                        <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Draft Status
-                        </Label>
-                        <select
-                          name="draft"
-                          value={formData.draft}
-                          onChange={handleChange}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        >
-                          <option value={false}>Finalized</option>
-                          <option value={true}>Draft</option>
-                        </select>
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div>
+                          <Label htmlFor="transportType">Transport Type</Label>
+                          <select
+                            id="transportType"
+                            name="transportType"
+                            value={formData.transportType}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          >
+                            <option value="walk">By Walk</option>
+                            <option value="bus">By Bus</option>
+                          </select>
+                        </div>
+
+                        {formData.transportType === "bus" && (
+                          <div>
+                            <Label htmlFor="bus" required>
+                              Choose Bus
+                            </Label>
+                            <select
+                              id="bus"
+                              name="bus"
+                              value={formData.bus}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            >
+                              <option value="">Select a bus</option>
+                              {buses.map((bus) => (
+                                <option key={bus._id} value={bus._id}>
+                                  {bus.busName}{" "}
+                                  {bus.busNumber ? `- ${bus.busNumber}` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

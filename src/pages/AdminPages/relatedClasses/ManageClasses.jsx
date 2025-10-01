@@ -49,36 +49,36 @@ export default function ManageClasses() {
     { value: "false", label: "Not Active" },
   ];
 
+  const fetchClasses = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/v1/Class/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+
+      // ✅ Only keep classes with status === true
+      // const filteredClasses = Array.isArray(data)
+      //   ? data.filter((cls) => cls.status === true)
+      //   : [];
+
+      // setClasses(filteredClasses);
+
+      setClasses(Array.isArray(data) ? data : []);
+
+      console.log(data);
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${API_URL}/api/v1/Classes/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-
-        // ✅ Only keep classes with status === true
-        // const filteredClasses = Array.isArray(data)
-        //   ? data.filter((cls) => cls.status === true)
-        //   : [];
-
-        // setClasses(filteredClasses);
-
-        setClasses(Array.isArray(data) ? data : []);
-
-        console.log(data);
-      } catch (error) {
-        console.error("Error fetching classes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchClasses();
   }, [API_URL, token]);
 
