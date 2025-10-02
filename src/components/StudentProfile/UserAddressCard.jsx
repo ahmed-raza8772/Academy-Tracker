@@ -1,17 +1,17 @@
-import { useModal } from "../../hooks/useModal";
-import { Modal } from "../ui/modal";
-import Button from "../ui/button/Button";
-import Input from "../form/input/InputField";
-import Label from "../form/Label";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../../hooks/useAuth";
 import Loader from "../common/Loader";
 
 export default function UserAddressCard({ id }) {
-  const { isOpen, openModal, closeModal } = useModal();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [busDetails, setBusDetails] = useState(null);
+  const [busLoading, setBusLoading] = useState(false);
+  const [classDetails, setClassDetails] = useState([]);
+  const [courseDetails, setCourseDetails] = useState([]);
+  const [classesLoading, setClassesLoading] = useState(false);
+  const [coursesLoading, setCoursesLoading] = useState(false);
 
   const { token } = useAuthStore();
   const API_URL = import.meta.env.VITE_API_URL;
@@ -22,6 +22,9 @@ export default function UserAddressCard({ id }) {
         setLoading(true);
         setError(null);
         setStudent(null);
+        setBusDetails(null);
+        setClassDetails([]);
+        setCourseDetails([]);
 
         const response = await fetch(`${API_URL}/api/v1/student`, {
           headers: {
@@ -38,6 +41,19 @@ export default function UserAddressCard({ id }) {
           const found = data.find((s) => String(s._id) === String(id));
           if (found) {
             setStudent(found);
+
+            // If student has bus reference and transport type is bus, fetch bus details
+            if (found.bus && found.transportType === "bus") {
+              await fetchBusDetails(found.bus);
+            }
+
+            // Fetch class and course details
+            if (found.classRef && found.classRef.length > 0) {
+              await fetchClassDetails(found.classRef);
+            }
+            if (found.courses && found.courses.length > 0) {
+              await fetchCourseDetails(found.courses);
+            }
           } else {
             throw new Error("Student not found");
           }
@@ -52,6 +68,106 @@ export default function UserAddressCard({ id }) {
       }
     };
 
+    const fetchBusDetails = async (busId) => {
+      try {
+        setBusLoading(true);
+
+        // Fetch all buses
+        const busResponse = await fetch(`${API_URL}/api/v1/bus/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!busResponse.ok) throw new Error("Failed to fetch buses");
+
+        const busesData = await busResponse.json();
+
+        // Filter to find the specific bus by ID
+        if (Array.isArray(busesData)) {
+          const foundBus = busesData.find(
+            (bus) => String(bus._id) === String(busId)
+          );
+          if (foundBus) {
+            setBusDetails(foundBus);
+          } else {
+            console.warn(`Bus with ID ${busId} not found`);
+          }
+        } else {
+          console.warn("Unexpected buses data format:", busesData);
+        }
+      } catch (error) {
+        console.error("Error fetching bus details:", error);
+      } finally {
+        setBusLoading(false);
+      }
+    };
+
+    const fetchClassDetails = async (classIds) => {
+      try {
+        setClassesLoading(true);
+
+        // Fetch all classes
+        const classResponse = await fetch(`${API_URL}/api/v1/class/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!classResponse.ok) throw new Error("Failed to fetch classes");
+
+        const classesData = await classResponse.json();
+
+        // Filter to find the specific classes by IDs
+        if (Array.isArray(classesData)) {
+          const foundClasses = classesData.filter((cls) =>
+            classIds.includes(String(cls._id))
+          );
+          setClassDetails(foundClasses);
+        } else {
+          console.warn("Unexpected classes data format:", classesData);
+        }
+      } catch (error) {
+        console.error("Error fetching class details:", error);
+      } finally {
+        setClassesLoading(false);
+      }
+    };
+
+    const fetchCourseDetails = async (courseIds) => {
+      try {
+        setCoursesLoading(true);
+
+        // Fetch all courses
+        const courseResponse = await fetch(`${API_URL}/api/v1/course/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!courseResponse.ok) throw new Error("Failed to fetch courses");
+
+        const coursesData = await courseResponse.json();
+
+        // Filter to find the specific courses by IDs
+        if (Array.isArray(coursesData)) {
+          const foundCourses = coursesData.filter((course) =>
+            courseIds.includes(String(course._id))
+          );
+          setCourseDetails(foundCourses);
+        } else {
+          console.warn("Unexpected courses data format:", coursesData);
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error);
+      } finally {
+        setCoursesLoading(false);
+      }
+    };
+
     if (id) {
       fetchStudent();
     } else {
@@ -60,20 +176,94 @@ export default function UserAddressCard({ id }) {
     }
   }, [id, token, API_URL]);
 
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving address changes...");
-    closeModal();
+  // Format date with time
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  // Format date function
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  // Display attendance days
+  const getAttendanceDays = (days) => {
+    if (!days) return "N/A";
+
+    const dayMap = {
+      M: "Mon",
+      T: "Tue",
+      W: "Wed",
+      Th: "Thu",
+      F: "Fri",
+      Sat: "Sat",
+      Sun: "Sun",
+    };
+
+    const selectedDays = Object.entries(days)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([day]) => dayMap[day] || day)
+      .join(", ");
+
+    return selectedDays || "No days selected";
+  };
+
+  // Bus Icon Component
+  const BusIcon = ({ className = "w-4 h-4" }) => (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+    </svg>
+  );
+
+  // Transport Icons
+  const TransportIcon = ({ type, className = "w-4 h-4" }) => {
+    if (type === "bus") {
+      return (
+        <svg
+          className={className}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      );
+    }
+    return (
+      <svg
+        className={className}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M13 10V3L4 14h7v7l9-11h-7z"
+        />
+      </svg>
+    );
   };
 
   // Loading state
@@ -106,252 +296,397 @@ export default function UserAddressCard({ id }) {
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex-1">
           <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
-            Contact & Administrative Information
+            Address & Administrative Information
           </h4>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
-            {/* Contact Information */}
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Student Phone
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {student.studentPhone || "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Mother's Phone
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {student.motherPhone || "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Father's Phone
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {student.fatherPhone || "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Student Email
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {student.studentEmail || "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Parent Email
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {student.parentEmail || "N/A"}
-              </p>
-            </div>
-
-            {/* Administrative Information */}
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Student ID
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {student.studentId || "N/A"}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Status
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    student.status
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                  }`}
-                >
-                  {student.status ? "Active" : "Inactive"}
-                </span>
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Draft Status
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    student.draft
-                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                      : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                  }`}
-                >
-                  {student.draft ? "Draft" : "Finalized"}
-                </span>
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Class Reference
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90 break-all">
-                {student.classRef || "N/A"}
-              </p>
-            </div>
-
-            {/* Dates */}
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Created Date
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {formatDate(student.createdAt)}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Last Updated
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {formatDate(student.updatedAt)}
-              </p>
-            </div>
-
-            {/* Days Preset */}
+            {/* Address Information */}
             <div className="lg:col-span-2">
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Attendance Days
+                Full Address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {student.daysPreset || "N/A"}
+                {student.address?.street || "N/A"},{" "}
+                {student.address?.city || "N/A"},{" "}
+                {student.address?.state || "N/A"}{" "}
+                {student.address?.postalCode || ""}{" "}
+                {student.address?.country ? `, ${student.address.country}` : ""}
               </p>
             </div>
-          </div>
-        </div>
 
-        <button
-          onClick={openModal}
-          className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
-        >
-          <svg
-            className="fill-current"
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              d="M15.0911 2.78206C14.2125 1.90338 12.7878 1.90338 11.9092 2.78206L4.57524 10.116C4.26682 10.4244 4.0547 10.8158 3.96468 11.2426L3.31231 14.3352C3.25997 14.5833 3.33653 14.841 3.51583 15.0203C3.69512 15.1996 3.95286 15.2761 4.20096 15.2238L7.29355 14.5714C7.72031 14.4814 8.11172 14.2693 8.42013 13.9609L15.7541 6.62695C16.6327 5.74827 16.6327 4.32365 15.7541 3.44497L15.0911 2.78206ZM12.9698 3.84272C13.2627 3.54982 13.7376 3.54982 14.0305 3.84272L14.6934 4.50563C14.9863 4.79852 14.9863 5.2734 14.6934 5.56629L14.044 6.21573L12.3204 4.49215L12.9698 3.84272ZM11.2597 5.55281L5.6359 11.1766C5.53309 11.2794 5.46238 11.4099 5.43238 11.5522L5.01758 13.5185L6.98394 13.1037C7.1262 13.0737 7.25666 13.003 7.35947 12.9002L12.9833 7.27639L11.2597 5.55281Z"
-              fill=""
-            />
-          </svg>
-          Edit
-        </button>
-      </div>
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                Street
+              </p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {student.address?.street || "N/A"}
+              </p>
+            </div>
 
-      {/* Edit Modal */}
-      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
-        <div className="relative w-full max-w-[700px] overflow-y-auto bg-white rounded-3xl no-scrollbar dark:bg-gray-900 lg:p-11">
-          <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Contact Information
-            </h4>
-            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Update contact details and administrative information.
-            </p>
-          </div>
-          <form className="flex flex-col">
-            <div className="h-[450px] overflow-y-auto custom-scrollbar px-2 pb-3">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                {/* Contact Information */}
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Student Phone</Label>
-                  <Input type="tel" defaultValue={student.studentPhone} />
-                </div>
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                City
+              </p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {student.address?.city || "N/A"}
+              </p>
+            </div>
 
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Mother's Phone</Label>
-                  <Input type="tel" defaultValue={student.motherPhone} />
-                </div>
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                State/Province
+              </p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {student.address?.state || "N/A"}
+              </p>
+            </div>
 
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Father's Phone</Label>
-                  <Input type="tel" defaultValue={student.fatherPhone} />
-                </div>
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                Postal Code
+              </p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {student.address?.postalCode || "N/A"}
+              </p>
+            </div>
 
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Student Email</Label>
-                  <Input type="email" defaultValue={student.studentEmail} />
-                </div>
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                Country
+              </p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {student.address?.country || "South Korea"}
+              </p>
+            </div>
 
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Parent Email</Label>
-                  <Input type="email" defaultValue={student.parentEmail} />
-                </div>
-
-                {/* Administrative Information */}
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Status</Label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-700 dark:bg-gray-800"
-                    defaultValue={student.status ? "active" : "inactive"}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-
-                <div className="col-span-2 lg:col-span-1">
-                  <Label>Draft Status</Label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-700 dark:bg-gray-800"
-                    defaultValue={student.draft ? "draft" : "finalized"}
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="finalized">Finalized</option>
-                  </select>
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Days Preset</Label>
-                  <Input type="text" defaultValue={student.daysPreset} />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Notes</Label>
-                  <textarea
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-700 dark:bg-gray-800"
-                    rows="3"
-                    defaultValue={student.notes}
+            {/* Transport Information Section */}
+            <div className="lg:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900/30">
+                  <TransportIcon
+                    type={student.transportType}
+                    className="w-4 h-4 text-blue-600 dark:text-blue-400"
                   />
+                </div>
+                <h5 className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                  Transportation Details
+                </h5>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                    Transport Type
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <TransportIcon
+                      type={student.transportType}
+                      className="w-4 h-4 text-gray-600 dark:text-gray-400"
+                    />
+                    <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                      {student.transportType === "bus"
+                        ? "School Bus"
+                        : student.transportType === "walk"
+                          ? "Walk to School"
+                          : "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bus Information */}
+                {student.transportType === "bus" && (
+                  <div>
+                    <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                      Assigned Bus
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <BusIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      {busLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Loading bus details...
+                          </span>
+                        </div>
+                      ) : busDetails ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+                            {busDetails.busName || "School Bus"}
+                            {busDetails.busNumber && (
+                              <span className="text-blue-600 dark:text-blue-400 ml-1">
+                                #{busDetails.busNumber}
+                              </span>
+                            )}
+                          </span>
+                          {busDetails.route && (
+                            <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">
+                              {busDetails.route}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {student.bus
+                            ? "Details unavailable"
+                            : "No bus assigned"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Academic Information */}
+            <div className="lg:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900/30">
+                  <svg
+                    className="w-4 h-4 text-orange-600 dark:text-orange-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 14l9-5-9-5-9 5 9 5z"
+                    />
+                  </svg>
+                </div>
+                <h5 className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                  Academic Information
+                </h5>
+              </div>
+
+              <div className="space-y-6">
+                {/* Classes Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      Assigned Classes
+                    </p>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {student.classRef?.length || 0} classes
+                    </span>
+                  </div>
+
+                  {classesLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-5 h-5 border-2 border-gray-300 border-t-orange-600 rounded-full animate-spin"></div>
+                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                        Loading classes...
+                      </span>
+                    </div>
+                  ) : classDetails.length > 0 ? (
+                    <div className="space-y-2">
+                      {classDetails.map((classItem) => (
+                        <div
+                          key={classItem._id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900/30">
+                              <svg
+                                className="w-3 h-3 text-orange-600 dark:text-orange-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                                {classItem.className || "Unnamed Class"}
+                              </p>
+                              {classItem.gradeLevel && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Grade {classItem.gradeLevel}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {classItem.section && (
+                            <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-full">
+                              {classItem.section}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 rounded-lg dark:bg-gray-800/50">
+                      No classes assigned
+                    </div>
+                  )}
+                </div>
+
+                {/* Courses Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      Enrolled Courses
+                    </p>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {student.courses?.length || 0} courses
+                    </span>
+                  </div>
+
+                  {coursesLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-5 h-5 border-2 border-gray-300 border-t-orange-600 rounded-full animate-spin"></div>
+                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                        Loading courses...
+                      </span>
+                    </div>
+                  ) : courseDetails.length > 0 ? (
+                    <div className="space-y-2">
+                      {courseDetails.map((course) => (
+                        <div
+                          key={course._id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 rounded-lg dark:bg-green-900/30">
+                              <svg
+                                className="w-3 h-3 text-green-600 dark:text-green-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                                {course.courseName || "Unnamed Course"}
+                              </p>
+                              {course.courseCode && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Code: {course.courseCode}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {course.credits && (
+                            <span className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-full">
+                              {course.credits} credits
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 rounded-lg dark:bg-gray-800/50">
+                      No courses enrolled
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeModal}>
-                Close
-              </Button>
-              <Button size="sm" onClick={handleSave}>
-                Save Changes
-              </Button>
+
+            {/* Attendance Information */}
+            <div className="lg:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 bg-green-100 rounded-lg dark:bg-green-900/30">
+                  <svg
+                    className="w-4 h-4 text-green-600 dark:text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+                <h5 className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                  Attendance Schedule
+                </h5>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                    Days Preset
+                  </p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                    {student.daysPreset || "Custom Schedule"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                    Attendance Days
+                  </p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                    {getAttendanceDays(student.days)}
+                  </p>
+                </div>
+              </div>
             </div>
-          </form>
+
+            {/* System Information */}
+            <div className="lg:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900/30">
+                  <svg
+                    className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                </div>
+                <h5 className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                  System Information
+                </h5>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                    Created Date
+                  </p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                    {formatDateTime(student.createdAt)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                    Last Updated
+                  </p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                    {formatDateTime(student.updatedAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </Modal>
+      </div>
     </div>
   );
 }

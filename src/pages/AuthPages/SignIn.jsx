@@ -15,7 +15,7 @@ export default function SignIn() {
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  const role = "Admin";
+  const role = "admin";
 
   const handleSignIn = async ({ email, password, remember }) => {
     setErrorMessage(null);
@@ -37,13 +37,13 @@ export default function SignIn() {
 
       // Successful login navigation
       console.log("6. Navigating based on role:", role);
-      if (role === "Admin") {
+      if (role === "admin") {
         navigate("/Admin/Dashboard");
-      } else if (role === "Student") {
+      } else if (role === "student") {
         navigate("/Student/Dashboard");
-      } else if (role === "Teacher") {
+      } else if (role === "teacher") {
         navigate("/Teacher/Dashboard");
-      } else if (role === "Parent") {
+      } else if (role === "parent") {
         navigate("/Parents/Dashboard");
       } else {
         navigate("/");

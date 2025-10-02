@@ -10,13 +10,21 @@ const TableBody = ({ children, className }) => {
   return <tbody className={className}>{children}</tbody>;
 };
 
-const TableRow = ({ children, className }) => {
-  return <tr className={className}>{children}</tr>;
+const TableRow = ({ children, className, onClick }) => {
+  return (
+    <tr className={className} onClick={onClick}>
+      {children}
+    </tr>
+  );
 };
 
-const TableCell = ({ children, isHeader = false, className }) => {
+const TableCell = ({ children, isHeader = false, className, onClick }) => {
   const CellTag = isHeader ? "th" : "td";
-  return <CellTag className={className}>{children}</CellTag>;
+  return (
+    <CellTag className={className} onClick={onClick}>
+      {children}
+    </CellTag>
+  );
 };
 
 export { Table, TableHeader, TableBody, TableRow, TableCell };

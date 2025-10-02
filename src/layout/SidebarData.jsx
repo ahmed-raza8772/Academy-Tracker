@@ -57,6 +57,22 @@ export const AdminSidebarData = [
       },
     ],
   },
+  {
+    name: "Users",
+    icon: <FaIcons.FaUsers />, // Represents a group of people
+    subItems: [
+      {
+        name: "Add User",
+        path: "/Admin/Users/Add",
+        icon: <FaIcons.FaUserPlus />, // Explicitly means "add a person"
+      },
+      {
+        name: "Manage Users",
+        path: "/Admin/Users/Manage",
+        icon: <FaIcons.FaUserCog />, // Represents user settings/management
+      },
+    ],
+  },
 ];
 
 // ---------- STUDENT ----------

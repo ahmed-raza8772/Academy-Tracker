@@ -13,7 +13,7 @@ import {
   ParentSidebarData,
 } from "./SidebarData";
 
-const AppSidebar = ({ role = "admin" }) => {
+const AppSidebar = ({ role }) => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
 

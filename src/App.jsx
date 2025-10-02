@@ -26,6 +26,9 @@ import AddClasses from "./pages/AdminPages/relatedClasses/AddClasses";
 import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
 import AddStudents from "./pages/AdminPages/relatedStudents/AddStudents";
 import ManageStudents from "./pages/AdminPages/relatedStudents/ManageSudents";
+import ViewStudent from "./pages/AdminPages/relatedStudents/ViewStudent";
+import AddUsers from "./pages/AdminPages/relatedUsers/AddUsers";
+import Users from "./pages/AdminPages/relatedUsers/Users";
 
 // Role-specific pages (you'll need to create these)
 // import StudentDashboard from "./pages/StudentPages/Home";
@@ -35,7 +38,6 @@ import ManageStudents from "./pages/AdminPages/relatedStudents/ManageSudents";
 // Auth store
 import { useAuthStore } from "./hooks/useAuth";
 import Loader from "./components/common/Loader";
-import ViewStudent from "./pages/AdminPages/relatedStudents/ViewStudent";
 
 // --- Helpers ---
 function isTokenExpired(token) {
@@ -88,11 +90,11 @@ const RootRedirect = () => {
   }
 
   switch (userRole) {
-    case "Admin":
+    case "admin":
       return <Navigate to="/Admin/Dashboard" replace />;
-    case "Teacher":
+    case "teacher":
       return <Navigate to="/Teacher/Dashboard" replace />;
-    case "Student":
+    case "student":
       return <Navigate to="/Student/Dashboard" replace />;
     default:
       return <Navigate to="/Parents/Dashboard" replace />;
@@ -111,11 +113,11 @@ const AuthPageWrapper = ({ children }) => {
 
   if (token && !isTokenExpired(token) && userRole) {
     switch (userRole) {
-      case "Admin":
+      case "admin":
         return <Navigate to="/Admin/Dashboard" replace />;
-      case "Teacher":
+      case "teacher":
         return <Navigate to="/Teacher/Dashboard" replace />;
-      case "Student":
+      case "student":
         return <Navigate to="/Student/Dashboard" replace />;
       default:
         return <Navigate to="/Parents/Dashboard" replace />;
@@ -163,7 +165,7 @@ export default function App() {
         <Route
           path="/Admin/*"
           element={
-            <AuthWrapper requiredRole="Admin">
+            <AuthWrapper requiredRole="admin">
               <AppLayout />
             </AuthWrapper>
           }
@@ -175,6 +177,8 @@ export default function App() {
           <Route path="Students/Manage" element={<ManageStudents />} />
           <Route path="Students/Add" element={<AddStudents />} />
           <Route path="Students/:id" element={<ViewStudent />} />
+          <Route path="Users/Add" element={<AddUsers />} />
+          <Route path="Users/Manage" element={<Users />} />
           <Route index element={<Navigate to="Dashboard" replace />} />
         </Route>
 
@@ -182,7 +186,7 @@ export default function App() {
         <Route
           path="/Student/*"
           element={
-            <AuthWrapper requiredRole="Student">
+            <AuthWrapper requiredRole="student">
               <AppLayout />
             </AuthWrapper>
           }
@@ -198,7 +202,7 @@ export default function App() {
         <Route
           path="/Teacher/*"
           element={
-            <AuthWrapper requiredRole="Teacher">
+            <AuthWrapper requiredRole="teacher">
               <AppLayout />
             </AuthWrapper>
           }
@@ -214,7 +218,7 @@ export default function App() {
         <Route
           path="/Parents/*"
           element={
-            <AuthWrapper requiredRole="Parent">
+            <AuthWrapper requiredRole="parent">
               <AppLayout />
             </AuthWrapper>
           }

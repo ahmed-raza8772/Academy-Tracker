@@ -3,14 +3,16 @@ import { Outlet } from "react-router";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
+import { useAuthStore } from "../hooks/useAuth";
 
 const LayoutContent = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const { userRole } = useAuthStore();
 
   return (
     <div className="min-h-screen xl:flex">
       <div>
-        <AppSidebar role="Admin" />
+        <AppSidebar role={userRole} />
         <Backdrop />
       </div>
       <div

@@ -211,10 +211,6 @@ export default function ManageStudents() {
     setSchools(hardcodedSchools);
   }, [API_URL, token]);
 
-  const handleView = (id) => {
-    navigate(`/Admin/Students/${id}`);
-  };
-
   const handleDelete = (student) => {
     setStudentToDelete(student);
     setConfirmOpen(true);
@@ -644,6 +640,10 @@ export default function ManageStudents() {
                         <TableRow
                           key={student._id || index}
                           className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
+                          onClick={() => {
+                            console.log("Clicked!");
+                            navigate(`/Admin/Students/${student._id}`);
+                          }}
                         >
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                             {student.studentId}
@@ -668,24 +668,10 @@ export default function ManageStudents() {
                           <TableCell className="px-4 py-3 text-start">
                             <div className="flex items-center gap-3">
                               <button
-                                onClick={() => handleView(student._id)}
-                                className="flex items-center justify-center p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                                title="View Student"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    clipRule="evenodd"
-                                    d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-7.5a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleUpdate(student)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdate(student);
+                                }}
                                 className="flex items-center justify-center p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
                                 title="Edit Student"
                               >
@@ -702,7 +688,10 @@ export default function ManageStudents() {
                                 </svg>
                               </button>
                               <button
-                                onClick={() => handleDelete(student)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(student);
+                                }}
                                 className="flex items-center justify-center p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500"
                                 title="Delete Student"
                               >
