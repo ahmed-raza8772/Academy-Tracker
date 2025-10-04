@@ -121,18 +121,18 @@ export default function ManageClasses() {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/v1/Classes/${classToDelete._id}`,
+        `${API_URL}/api/v1/Class/${classToDelete._id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // ensure token is available
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             classCode: classToDelete.classCode,
             className: classToDelete.className,
             grade: classToDelete.grade,
-            status: false,
+            status: false, // Soft delete
           }),
         }
       );
@@ -140,12 +140,17 @@ export default function ManageClasses() {
       const data = await response.json();
 
       if (response.ok) {
-        // Update state locally to remove from list
-        setClasses((prev) => prev.filter((c) => c._id !== classToDelete._id));
+        // ✅ UPDATE instead of REMOVE - keep the class in list but update its status
+        setClasses((prev) =>
+          prev.map((c) =>
+            c._id === classToDelete._id ? { ...c, status: false } : c
+          )
+        );
+
         setAlert({
           variant: "info",
           title: "Success",
-          message: "Class has been Deleted successfully!",
+          message: "Class has been deactivated successfully!",
         });
         setTimeout(() => setAlert(null), 3000);
         console.log("Class status updated:", data);
@@ -154,7 +159,7 @@ export default function ManageClasses() {
         setAlert({
           variant: "error",
           title: "Error",
-          message: "Failed Deleting Class!",
+          message: "Failed deactivating Class!",
         });
         setTimeout(() => setAlert(null), 3000);
       }
@@ -163,7 +168,7 @@ export default function ManageClasses() {
       setAlert({
         variant: "error",
         title: "Error",
-        message: "Error Deleting Class!",
+        message: "Error deactivating Class!",
       });
       setTimeout(() => setAlert(null), 3000);
     } finally {
@@ -191,7 +196,7 @@ export default function ManageClasses() {
       };
 
       const response = await fetch(
-        `${API_URL}/api/v1/Classes/${selectedClass._id}`,
+        `${API_URL}/api/v1/Class/${selectedClass._id}`,
         {
           method: "PUT",
           headers: {

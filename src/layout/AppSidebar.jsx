@@ -23,7 +23,7 @@ const AppSidebar = ({ role }) => {
 
   // ✅ Pick navItems based on role
   let navItems = [];
-  switch (role) {
+  switch (role?.toLowerCase()) {
     case "student":
       navItems = StudentSidebarData;
       break;
@@ -33,6 +33,7 @@ const AppSidebar = ({ role }) => {
     case "parent":
       navItems = ParentSidebarData;
       break;
+    case "admin":
     default:
       navItems = AdminSidebarData;
   }

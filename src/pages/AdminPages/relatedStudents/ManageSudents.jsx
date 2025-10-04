@@ -39,6 +39,7 @@ export default function ManageStudents() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
 
   // Transform classes data for MultiSelect
   const classOptions = classes.map((cls) => ({
@@ -130,6 +131,23 @@ export default function ManageStudents() {
       email: "admin@daeguenglish.edu",
     },
   ];
+
+  // Fetch specific student data when needed
+  const fetchStudentById = async (studentId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/student/${studentId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching student:", error);
+      return null;
+    }
+  };
 
   const fetchStudents = async () => {
     try {
@@ -238,6 +256,7 @@ export default function ManageStudents() {
       const data = await response.json();
 
       if (response.ok) {
+        // Update local state
         setStudents((prev) =>
           prev.map((s) =>
             s._id === studentToDelete._id ? { ...s, status: false } : s
@@ -355,11 +374,18 @@ export default function ManageStudents() {
     return dateString ? new Date(dateString) : null;
   };
 
-  const handleUpdate = (student) => {
+  // OPTIMIZED: Handle update with instant modal opening
+  const handleUpdate = async (student) => {
     setSelectedStudent(student);
 
-    // Parse the student data to match the form structure
-    const address = student.address || {
+    // Open modal immediately with existing data
+    setIsUpdateOpen(true);
+
+    // Use existing student data for instant display
+    const existingData = student;
+
+    // Parse existing data for immediate form population
+    const address = existingData.address || {
       street: "",
       city: "",
       state: "",
@@ -367,17 +393,25 @@ export default function ManageStudents() {
       country: "South Korea",
     };
 
-    setFormData({
-      // Personal Information
-      studentId: student.studentId || "",
-      englishFirst: student.englishFirst || "",
-      englishLast: student.englishLast || "",
-      koreanFamily: student.koreanFamily || "",
-      koreanGiven: student.koreanGiven || "",
-      sex: student.sex || "",
-      birthday: student.birthday ? student.birthday.split("T")[0] : "",
+    // Get class names from already loaded classes data
+    const selectedClassNames = (existingData.classRef || [])
+      .map((classId) => {
+        const cls = classes.find((c) => c._id === classId);
+        return cls ? cls.className : "";
+      })
+      .filter((name) => name);
 
-      // Contact Information - Updated structure
+    // Set form data immediately with existing data
+    setFormData({
+      studentId: existingData.studentId || "",
+      englishFirst: existingData.englishFirst || "",
+      englishLast: existingData.englishLast || "",
+      koreanFamily: existingData.koreanFamily || "",
+      koreanGiven: existingData.koreanGiven || "",
+      sex: existingData.sex || "",
+      birthday: existingData.birthday
+        ? existingData.birthday.split("T")[0]
+        : "",
       address: {
         street: address.street || "",
         city: address.city || "",
@@ -385,27 +419,21 @@ export default function ManageStudents() {
         postalCode: address.postalCode || "",
         country: address.country || "South Korea",
       },
-      studentPhone: student.studentPhone || "",
-      motherPhone: student.motherPhone || "",
-      fatherPhone: student.fatherPhone || "",
-      studentEmail: student.studentEmail || "",
-      parentEmail: student.parentEmail || "",
-
-      // School Information
-      school: student.school || "",
-
-      // Enrollment Information
-      dateOfEnrollment: student.dateOfEnrollment
-        ? student.dateOfEnrollment.split("T")[0]
+      studentPhone: existingData.studentPhone || "",
+      motherPhone: existingData.motherPhone || "",
+      fatherPhone: existingData.fatherPhone || "",
+      studentEmail: existingData.studentEmail || "",
+      parentEmail: existingData.parentEmail || "",
+      school: existingData.school || "",
+      dateOfEnrollment: existingData.dateOfEnrollment
+        ? existingData.dateOfEnrollment.split("T")[0]
         : "",
-      classRef: student.classRef || [],
-      courses: student.courses || [],
-      classes: student.classes || [],
-      daysPreset: student.daysPreset || "",
-      status: student.status !== undefined ? student.status : true,
-
-      // Attendance Days
-      days: student.days || {
+      classRef: existingData.classRef || [],
+      courses: existingData.courses || [],
+      classes: selectedClassNames,
+      daysPreset: existingData.daysPreset || "",
+      status: existingData.status !== undefined ? existingData.status : true,
+      days: existingData.days || {
         M: false,
         T: false,
         W: false,
@@ -414,13 +442,44 @@ export default function ManageStudents() {
         Sat: false,
         Sun: false,
       },
-
-      // Additional
-      notes: student.notes || "",
-      transportType: student.transportType || "walk",
-      bus: student.bus || "",
+      notes: existingData.notes || "",
+      transportType: existingData.transportType || "walk",
+      bus: existingData.bus || "",
     });
-    setIsUpdateOpen(true);
+
+    // OPTIONAL: Fetch fresh data in background for updates
+    setModalLoading(true);
+    try {
+      const freshData = await fetchStudentById(student._id);
+      if (freshData) {
+        // Update form with fresh data if needed
+        const freshAddress = freshData.address || address;
+
+        setFormData((prev) => ({
+          ...prev,
+          // Only update fields that might have changed
+          studentPhone: freshData.studentPhone || prev.studentPhone,
+          motherPhone: freshData.motherPhone || prev.motherPhone,
+          fatherPhone: freshData.fatherPhone || prev.fatherPhone,
+          studentEmail: freshData.studentEmail || prev.studentEmail,
+          parentEmail: freshData.parentEmail || prev.parentEmail,
+          address: {
+            street: freshAddress.street || prev.address.street,
+            city: freshAddress.city || prev.address.city,
+            state: freshAddress.state || prev.address.state,
+            postalCode: freshAddress.postalCode || prev.address.postalCode,
+            country: freshAddress.country || prev.address.country,
+          },
+          notes: freshData.notes || prev.notes,
+          status:
+            freshData.status !== undefined ? freshData.status : prev.status,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching fresh student data:", error);
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -523,18 +582,18 @@ export default function ManageStudents() {
     }
   };
 
-  // 🔍 Search
+  // 🔍 Simple search - only for basic display filtering
   const filteredData = useMemo(() => {
+    if (!searchTerm.trim()) return students;
+
     const term = searchTerm.toLowerCase().trim();
-
     return students.filter((student) => {
-      if (term === "active" || term === "not active" || term === "inactive") {
-        const statusLabel = student.status ? "active" : "not active";
-        return statusLabel.includes(term);
-      }
-
-      return Object.values(student).some((val) =>
-        String(val).toLowerCase().includes(term)
+      return (
+        student.studentId?.toLowerCase().includes(term) ||
+        student.englishFirst?.toLowerCase().includes(term) ||
+        student.englishLast?.toLowerCase().includes(term) ||
+        student.koreanFamily?.toLowerCase().includes(term) ||
+        student.koreanGiven?.toLowerCase().includes(term)
       );
     });
   }, [searchTerm, students]);
@@ -573,7 +632,7 @@ export default function ManageStudents() {
           <div className="p-4 border-b border-gray-200 dark:border-white/[0.05]">
             <Input
               type="text"
-              placeholder="Search by ID, Name or status..."
+              placeholder="Search by ID or Name..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -641,7 +700,6 @@ export default function ManageStudents() {
                           key={student._id || index}
                           className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
                           onClick={() => {
-                            console.log("Clicked!");
                             navigate(`/Admin/Students/${student._id}`);
                           }}
                         >
@@ -769,10 +827,10 @@ export default function ManageStudents() {
           </div>
         </ComponentCard>
 
-        {/* Update Modal - UPDATED TO MATCH ADD STUDENT STRUCTURE */}
+        {/* Update Modal with Built-in Loader */}
         <Modal
           isOpen={isUpdateOpen}
-          onClose={() => setIsUpdateOpen(false)}
+          onClose={() => !modalLoading && setIsUpdateOpen(false)}
           className="max-w-4xl mx-4 max-h-[100vh]"
         >
           <div className="relative w-full p-6 overflow-hidden bg-white rounded-xl shadow-2xl dark:bg-gray-800 lg:p-8">
@@ -788,7 +846,8 @@ export default function ManageStudents() {
               </div>
               <button
                 onClick={() => setIsUpdateOpen(false)}
-                className="p-2 text-gray-400 transition-colors rounded-lg hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700"
+                disabled={modalLoading}
+                className="p-2 text-gray-400 transition-colors rounded-lg hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg
                   className="w-5 h-5"
@@ -805,6 +864,18 @@ export default function ManageStudents() {
                 </svg>
               </button>
             </div>
+
+            {/* Built-in Loader */}
+            {modalLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 dark:bg-gray-800 dark:bg-opacity-80 z-10 rounded-xl">
+                <div className="text-center">
+                  <Loader />
+                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    Loading student data...
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={(e) => e.preventDefault()}>
               {/* Scrollable Content */}
@@ -850,12 +921,18 @@ export default function ManageStudents() {
                           value={formData.studentId}
                           onChange={handleChange}
                           placeholder="STU20250923001"
+                          disabled={modalLoading}
                         />
                       </div>
 
                       <div>
                         <Label htmlFor="image">Student Image</Label>
-                        <FileInput id="image" type="file" name="image" />
+                        <FileInput
+                          id="image"
+                          type="file"
+                          name="image"
+                          disabled={modalLoading}
+                        />
                       </div>
 
                       <div>
@@ -869,6 +946,7 @@ export default function ManageStudents() {
                           value={formData.englishFirst}
                           onChange={handleChange}
                           placeholder="Jeffery"
+                          disabled={modalLoading}
                         />
                       </div>
 
@@ -883,6 +961,7 @@ export default function ManageStudents() {
                           value={formData.englishLast}
                           onChange={handleChange}
                           placeholder="Epstein"
+                          disabled={modalLoading}
                         />
                       </div>
 
@@ -895,6 +974,7 @@ export default function ManageStudents() {
                           value={formData.koreanFamily}
                           onChange={handleChange}
                           placeholder="김"
+                          disabled={modalLoading}
                         />
                       </div>
 
@@ -907,6 +987,7 @@ export default function ManageStudents() {
                           value={formData.koreanGiven}
                           onChange={handleChange}
                           placeholder="철수"
+                          disabled={modalLoading}
                         />
                       </div>
 
@@ -920,6 +1001,7 @@ export default function ManageStudents() {
                           value={formData.sex}
                           onChange={handleChange}
                           className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          disabled={modalLoading}
                         >
                           <option value="">Select Gender</option>
                           <option value="M">Male</option>
@@ -936,11 +1018,13 @@ export default function ManageStudents() {
                           required
                           maxDate={new Date()}
                           placeholderText="Select date of birth"
+                          disabled={modalLoading}
                         />
                       </div>
                     </div>
                   </div>
 
+                  {/* Rest of your form sections with disabled={modalLoading} */}
                   {/* School Information Section */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
                     <div className="flex items-center mb-6">
@@ -980,6 +1064,7 @@ export default function ManageStudents() {
                           value={formData.school}
                           onChange={handleChange}
                           className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          disabled={modalLoading}
                         >
                           <option value="">Select a School</option>
                           {schools.map((school) => (
@@ -992,7 +1077,7 @@ export default function ManageStudents() {
                     </div>
                   </div>
 
-                  {/* Contact Information Section - UPDATED */}
+                  {/* Contact Information Section */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
                     <div className="flex items-center mb-6">
                       <div className="flex items-center justify-center w-10 h-10 mr-4 bg-green-100 rounded-xl dark:bg-green-900/30">
@@ -1040,6 +1125,7 @@ export default function ManageStudents() {
                                 handleAddressChange("street", e.target.value)
                               }
                               placeholder="Sector A, Gangnam-gu"
+                              disabled={modalLoading}
                             />
                           </div>
                           <div>
@@ -1055,6 +1141,7 @@ export default function ManageStudents() {
                                 handleAddressChange("city", e.target.value)
                               }
                               placeholder="Seoul"
+                              disabled={modalLoading}
                             />
                           </div>
                           <div>
@@ -1070,6 +1157,7 @@ export default function ManageStudents() {
                                 handleAddressChange("state", e.target.value)
                               }
                               placeholder="Seoul"
+                              disabled={modalLoading}
                             />
                           </div>
                           <div>
@@ -1088,6 +1176,7 @@ export default function ManageStudents() {
                                 )
                               }
                               placeholder="60000"
+                              disabled={modalLoading}
                             />
                           </div>
                         </div>
@@ -1104,6 +1193,7 @@ export default function ManageStudents() {
                             value={formData.studentPhone}
                             onChange={handleChange}
                             placeholder="+82 10-1234-5678"
+                            disabled={modalLoading}
                           />
                         </div>
 
@@ -1116,6 +1206,7 @@ export default function ManageStudents() {
                             value={formData.studentEmail}
                             onChange={handleChange}
                             placeholder="student@example.com"
+                            disabled={modalLoading}
                           />
                         </div>
 
@@ -1128,6 +1219,7 @@ export default function ManageStudents() {
                             value={formData.motherPhone}
                             onChange={handleChange}
                             placeholder="+82 10-9876-5432"
+                            disabled={modalLoading}
                           />
                         </div>
 
@@ -1140,6 +1232,7 @@ export default function ManageStudents() {
                             value={formData.fatherPhone}
                             onChange={handleChange}
                             placeholder="+82 10-5555-7777"
+                            disabled={modalLoading}
                           />
                         </div>
 
@@ -1152,13 +1245,14 @@ export default function ManageStudents() {
                             value={formData.parentEmail}
                             onChange={handleChange}
                             placeholder="parent@example.com"
+                            disabled={modalLoading}
                           />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Enrollment Information Section - UPDATED */}
+                  {/* Enrollment Information Section */}
                   <div className="p-6 bg-gray-50 rounded-xl dark:bg-gray-900/50">
                     <div className="flex items-center mb-6">
                       <div className="flex items-center justify-center w-10 h-10 mr-4 bg-purple-100 rounded-xl dark:bg-purple-900/30">
@@ -1199,6 +1293,7 @@ export default function ManageStudents() {
                           required
                           maxDate={new Date()}
                           placeholderText="Select enrollment date"
+                          disabled={modalLoading}
                         />
                       </div>
 
@@ -1212,6 +1307,7 @@ export default function ManageStudents() {
                           value={formData.status}
                           onChange={handleChange}
                           className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          disabled={modalLoading}
                         >
                           <option value={true}>Active</option>
                           <option value={false}>Inactive</option>
@@ -1228,7 +1324,7 @@ export default function ManageStudents() {
                           options={classOptions}
                           defaultSelected={formData.classRef}
                           onChange={handleClassSelection}
-                          disabled={false}
+                          disabled={modalLoading}
                           hideSelectedItems={true}
                         />
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -1265,7 +1361,7 @@ export default function ManageStudents() {
                           options={courseOptions}
                           defaultSelected={formData.courses}
                           onChange={handleCourseSelection}
-                          disabled={false}
+                          disabled={modalLoading}
                           hideSelectedItems={true}
                         />
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -1306,6 +1402,7 @@ export default function ManageStudents() {
                           value={formData.daysPreset}
                           onChange={handleChange}
                           placeholder="Mon–Fri"
+                          disabled={modalLoading}
                         />
                       </div>
                     </div>
@@ -1360,6 +1457,7 @@ export default function ManageStudents() {
                               handleDaysChange(day.key, e.target.checked)
                             }
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            disabled={modalLoading}
                           />
                           <span className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                             {day.label}
@@ -1382,6 +1480,7 @@ export default function ManageStudents() {
                           rows="4"
                           className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                           placeholder="Allergic to peanuts. Needs special attention. Any other relevant information..."
+                          disabled={modalLoading}
                         />
                       </div>
 
@@ -1394,6 +1493,7 @@ export default function ManageStudents() {
                             value={formData.transportType}
                             onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            disabled={modalLoading}
                           >
                             <option value="walk">By Walk</option>
                             <option value="bus">By Bus</option>
@@ -1411,6 +1511,7 @@ export default function ManageStudents() {
                               value={formData.bus}
                               onChange={handleChange}
                               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              disabled={modalLoading}
                             >
                               <option value="">Select a bus</option>
                               {buses.map((bus) => (
@@ -1434,14 +1535,15 @@ export default function ManageStudents() {
                   size="sm"
                   variant="outline"
                   onClick={() => setIsUpdateOpen(false)}
-                  className="px-6 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  disabled={modalLoading}
+                  className="px-6 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   Cancel
                 </Button>
                 <Button
                   size="sm"
                   onClick={handleSave}
-                  disabled={loading}
+                  disabled={loading || modalLoading}
                   className="px-6 py-2.5 bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
                 >
                   {loading ? (

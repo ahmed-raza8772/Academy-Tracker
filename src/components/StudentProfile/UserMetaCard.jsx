@@ -18,26 +18,22 @@ export default function UserMetaCard({ id }) {
         setError(null);
         setStudent(null);
 
-        const response = await fetch(`${API_URL}/api/v1/student/`, {
+        // Fetch specific student by ID
+        const response = await fetch(`${API_URL}/api/v1/student/${id}`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) throw new Error("Failed to fetch students");
+        if (!response.ok) throw new Error("Failed to fetch student");
 
-        const data = await response.json();
+        const studentData = await response.json();
 
-        if (Array.isArray(data) && data.length > 0) {
-          const found = data.find((s) => String(s._id) === String(id));
-          if (found) {
-            setStudent(found);
-          } else {
-            throw new Error("Student not found");
-          }
+        if (studentData) {
+          setStudent(studentData);
         } else {
-          throw new Error("No students returned");
+          throw new Error("Student not found");
         }
       } catch (error) {
         console.error("Error fetching student details:", error);

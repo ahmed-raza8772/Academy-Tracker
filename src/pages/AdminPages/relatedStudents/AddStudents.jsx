@@ -362,13 +362,6 @@ export default function AddStudents() {
   };
 
   const handleCourseSelection = (selectedCourseIds) => {
-    const selectedCourseNames = selectedCourseIds
-      .map((courseId) => {
-        const selectedCourse = courses.find((crs) => crs._id === courseId);
-        return selectedCourse ? selectedCourse.courseName : "";
-      })
-      .filter((name) => name !== "");
-
     setFormData((prev) => ({
       ...prev,
       courses: selectedCourseIds,

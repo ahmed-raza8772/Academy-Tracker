@@ -26,39 +26,35 @@ export default function UserAddressCard({ id }) {
         setClassDetails([]);
         setCourseDetails([]);
 
-        const response = await fetch(`${API_URL}/api/v1/student`, {
+        // Fetch specific student by ID
+        const response = await fetch(`${API_URL}/api/v1/student/${id}`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) throw new Error("Failed to fetch students");
+        if (!response.ok) throw new Error("Failed to fetch student");
 
-        const data = await response.json();
+        const studentData = await response.json();
 
-        if (Array.isArray(data) && data.length > 0) {
-          const found = data.find((s) => String(s._id) === String(id));
-          if (found) {
-            setStudent(found);
+        if (studentData) {
+          setStudent(studentData);
 
-            // If student has bus reference and transport type is bus, fetch bus details
-            if (found.bus && found.transportType === "bus") {
-              await fetchBusDetails(found.bus);
-            }
+          // If student has bus reference and transport type is bus, fetch bus details
+          if (studentData.bus && studentData.transportType === "bus") {
+            await fetchBusDetails(studentData.bus);
+          }
 
-            // Fetch class and course details
-            if (found.classRef && found.classRef.length > 0) {
-              await fetchClassDetails(found.classRef);
-            }
-            if (found.courses && found.courses.length > 0) {
-              await fetchCourseDetails(found.courses);
-            }
-          } else {
-            throw new Error("Student not found");
+          // Fetch class and course details using specific IDs
+          if (studentData.classRef && studentData.classRef.length > 0) {
+            await fetchClassDetails(studentData.classRef);
+          }
+          if (studentData.courses && studentData.courses.length > 0) {
+            await fetchCourseDetails(studentData.courses);
           }
         } else {
-          throw new Error("No students returned");
+          throw new Error("Student not found");
         }
       } catch (error) {
         console.error("Error fetching student details:", error);
@@ -72,30 +68,19 @@ export default function UserAddressCard({ id }) {
       try {
         setBusLoading(true);
 
-        // Fetch all buses
-        const busResponse = await fetch(`${API_URL}/api/v1/bus/`, {
+        // Fetch specific bus by ID
+        const busResponse = await fetch(`${API_URL}/api/v1/bus/${busId}`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!busResponse.ok) throw new Error("Failed to fetch buses");
-
-        const busesData = await busResponse.json();
-
-        // Filter to find the specific bus by ID
-        if (Array.isArray(busesData)) {
-          const foundBus = busesData.find(
-            (bus) => String(bus._id) === String(busId)
-          );
-          if (foundBus) {
-            setBusDetails(foundBus);
-          } else {
-            console.warn(`Bus with ID ${busId} not found`);
-          }
+        if (busResponse.ok) {
+          const busData = await busResponse.json();
+          setBusDetails(busData);
         } else {
-          console.warn("Unexpected buses data format:", busesData);
+          console.warn(`Bus with ID ${busId} not found`);
         }
       } catch (error) {
         console.error("Error fetching bus details:", error);
@@ -108,27 +93,21 @@ export default function UserAddressCard({ id }) {
       try {
         setClassesLoading(true);
 
-        // Fetch all classes
-        const classResponse = await fetch(`${API_URL}/api/v1/class/`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        // Fetch specific classes by their IDs
+        const classPromises = classIds.map((classId) =>
+          fetch(`${API_URL}/api/v1/class/${classId}`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null)
+        );
 
-        if (!classResponse.ok) throw new Error("Failed to fetch classes");
-
-        const classesData = await classResponse.json();
-
-        // Filter to find the specific classes by IDs
-        if (Array.isArray(classesData)) {
-          const foundClasses = classesData.filter((cls) =>
-            classIds.includes(String(cls._id))
-          );
-          setClassDetails(foundClasses);
-        } else {
-          console.warn("Unexpected classes data format:", classesData);
-        }
+        const classesData = await Promise.all(classPromises);
+        const validClasses = classesData.filter((cls) => cls !== null);
+        setClassDetails(validClasses);
       } catch (error) {
         console.error("Error fetching class details:", error);
       } finally {
@@ -140,27 +119,21 @@ export default function UserAddressCard({ id }) {
       try {
         setCoursesLoading(true);
 
-        // Fetch all courses
-        const courseResponse = await fetch(`${API_URL}/api/v1/course/`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        // Fetch specific courses by their IDs
+        const coursePromises = courseIds.map((courseId) =>
+          fetch(`${API_URL}/api/v1/course/${courseId}`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null)
+        );
 
-        if (!courseResponse.ok) throw new Error("Failed to fetch courses");
-
-        const coursesData = await courseResponse.json();
-
-        // Filter to find the specific courses by IDs
-        if (Array.isArray(coursesData)) {
-          const foundCourses = coursesData.filter((course) =>
-            courseIds.includes(String(course._id))
-          );
-          setCourseDetails(foundCourses);
-        } else {
-          console.warn("Unexpected courses data format:", coursesData);
-        }
+        const coursesData = await Promise.all(coursePromises);
+        const validCourses = coursesData.filter((course) => course !== null);
+        setCourseDetails(validCourses);
       } catch (error) {
         console.error("Error fetching course details:", error);
       } finally {
@@ -203,7 +176,7 @@ export default function UserAddressCard({ id }) {
     };
 
     const selectedDays = Object.entries(days)
-      .filter(([_, isSelected]) => isSelected)
+      .filter(([, isSelected]) => isSelected)
       .map(([day]) => dayMap[day] || day)
       .join(", ");
 

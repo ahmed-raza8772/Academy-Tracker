@@ -8,47 +8,40 @@ import { useAuthStore } from "../../hooks/useAuth";
 import { authService } from "../../services/auth/authServices.js";
 
 export default function SignIn() {
-  const [Loading, setLoading] = useState(false);
-  // 🔥 1. State to hold and display error messages
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
-
-  const role = "admin";
 
   const handleSignIn = async ({ email, password, remember }) => {
     setErrorMessage(null);
     setLoading(true);
 
     try {
-      console.log("1. Starting login process with email:", email);
+      console.log("Starting login process with email:", email);
 
       const data = await authService.login(email, password);
-      console.log("2. AuthService response:", data);
+      console.log("AuthService response:", data);
 
-      const { token } = data;
-      console.log("3. Token received:", token);
+      const { token, role } = data;
 
-      // Check if login function exists and call it
-      console.log("4. Calling login function...");
-      login(token, role, "admin123", remember);
-      console.log("5. Login function completed");
-
-      // Successful login navigation
-      console.log("6. Navigating based on role:", role);
-      if (role === "admin") {
-        navigate("/Admin/Dashboard");
-      } else if (role === "student") {
-        navigate("/Student/Dashboard");
-      } else if (role === "teacher") {
-        navigate("/Teacher/Dashboard");
-      } else if (role === "parent") {
-        navigate("/Parents/Dashboard");
-      } else {
-        navigate("/");
+      if (!token) {
+        throw new Error("No token received from server");
       }
-      console.log("7. Navigation triggered");
+
+      const username = email.split("@")[0]; // Extract username from email
+
+      console.log("Assigned role:", role);
+      console.log("Username:", username);
+
+      // Store token, role, and username in Zustand and localStorage
+      login(token, role, username, remember);
+
+      // Navigate based on assigned role
+      const redirectPath = getDashboardPath(role);
+      console.log("Navigating to:", redirectPath);
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error("Login failed:", err);
       setErrorMessage(
@@ -58,7 +51,24 @@ export default function SignIn() {
       setLoading(false);
     }
   };
-  if (Loading) return <Loader />;
+
+  // Helper function to get dashboard path
+  const getDashboardPath = (role) => {
+    switch (role?.toLowerCase()) {
+      case "admin":
+        return "/Admin/Dashboard";
+      case "teacher":
+        return "/Teacher/Dashboard";
+      case "student":
+        return "/Student/Dashboard";
+      case "parent":
+        return "/Parents/Dashboard";
+      default:
+        return "/Admin/Dashboard"; // Default to admin dashboard
+    }
+  };
+
+  if (loading) return <Loader />;
 
   return (
     <>

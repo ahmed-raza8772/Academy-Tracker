@@ -26,6 +26,7 @@ export default function AddUsers() {
 
   const validateField = (name, value) => {
     const errors = { ...fieldErrors };
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     switch (name) {
       case "fullname":
@@ -36,7 +37,6 @@ export default function AddUsers() {
         }
         break;
       case "email":
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!value.trim()) {
           errors.email = "Email is required";
         } else if (!emailRegex.test(value)) {

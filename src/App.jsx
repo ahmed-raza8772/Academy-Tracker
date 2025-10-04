@@ -30,29 +30,29 @@ import ViewStudent from "./pages/AdminPages/relatedStudents/ViewStudent";
 import AddUsers from "./pages/AdminPages/relatedUsers/AddUsers";
 import Users from "./pages/AdminPages/relatedUsers/Users";
 
-// Role-specific pages (you'll need to create these)
-// import StudentDashboard from "./pages/StudentPages/Home";
-// import TeacherDashboard from "./pages/TeacherPages/Home";
-// import ParentDashboard from "./pages/ParentPages/Home";
-
 // Auth store
 import { useAuthStore } from "./hooks/useAuth";
 import Loader from "./components/common/Loader";
 
 // --- Helpers ---
-function isTokenExpired(token) {
+function isTokenValid(token) {
+  if (!token) return false;
+
   try {
     const decoded = jwtDecode(token);
-    if (!decoded.exp) return false;
-    return decoded.exp * 1000 < Date.now();
-  } catch {
-    return true;
+    if (!decoded.exp) return true; // If no expiration, assume valid
+
+    const currentTime = Date.now() / 1000;
+    return decoded.exp > currentTime;
+  } catch (error) {
+    console.error("Token validation error:", error);
+    return false;
   }
 }
 
 // --- Wrappers ---
 const AuthWrapper = ({ children, requiredRole = null }) => {
-  const { token, userRole } = useAuthStore();
+  const { token, userRole } = useAuthStore(); // Get role from auth store
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -61,44 +61,18 @@ const AuthWrapper = ({ children, requiredRole = null }) => {
 
   if (isChecking) return <Loader />;
 
-  const isExpired = !token || isTokenExpired(token);
-  if (isExpired) return <Navigate to="/Account/login" replace />;
-
-  // Role-based protection
-  if (requiredRole && userRole !== requiredRole) {
-    switch (userRole) {
-      case "Admin":
-        return <Navigate to="/Admin/Dashboard" replace />;
-      case "Teacher":
-        return <Navigate to="/Teacher/Dashboard" replace />;
-      case "Student":
-        return <Navigate to="/Student/Dashboard" replace />;
-      default:
-        return <Navigate to="/Parents/Dashboard" replace />;
-    }
-  }
-
-  return children;
-};
-
-// --- RootRedirect helper ---
-const RootRedirect = () => {
-  const { token, userRole } = useAuthStore();
-
-  if (!token || isTokenExpired(token)) {
+  if (!token || !isTokenValid(token)) {
     return <Navigate to="/Account/login" replace />;
   }
 
-  switch (userRole) {
-    case "admin":
-      return <Navigate to="/Admin/Dashboard" replace />;
-    case "teacher":
-      return <Navigate to="/Teacher/Dashboard" replace />;
-    case "student":
-      return <Navigate to="/Student/Dashboard" replace />;
-    default:
-      return <Navigate to="/Parents/Dashboard" replace />;
+  // Role-based protection
+  if (requiredRole && userRole !== requiredRole) {
+    // Redirect to appropriate dashboard based on actual role from store
+    const redirectPath = getDashboardPath(userRole);
+    return <Navigate to={redirectPath} replace />;
   }
+
+  return children;
 };
 
 const AuthPageWrapper = ({ children }) => {
@@ -111,20 +85,47 @@ const AuthPageWrapper = ({ children }) => {
 
   if (isChecking) return <Loader />;
 
-  if (token && !isTokenExpired(token) && userRole) {
-    switch (userRole) {
-      case "admin":
-        return <Navigate to="/Admin/Dashboard" replace />;
-      case "teacher":
-        return <Navigate to="/Teacher/Dashboard" replace />;
-      case "student":
-        return <Navigate to="/Student/Dashboard" replace />;
-      default:
-        return <Navigate to="/Parents/Dashboard" replace />;
-    }
+  if (token && isTokenValid(token) && userRole) {
+    const redirectPath = getDashboardPath(userRole);
+    return <Navigate to={redirectPath} replace />;
   }
 
   return children;
+};
+
+// --- Helper function for dashboard paths ---
+const getDashboardPath = (role) => {
+  switch (role?.toLowerCase()) {
+    case "admin":
+      return "/Admin/Dashboard";
+    case "teacher":
+      return "/Teacher/Dashboard";
+    case "student":
+      return "/Student/Dashboard";
+    case "parent":
+      return "/Parents/Dashboard";
+    default:
+      return "/Admin/Dashboard"; // Default to admin
+  }
+};
+
+// --- RootRedirect helper ---
+const RootRedirect = () => {
+  const { token, userRole } = useAuthStore();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    setIsChecking(false);
+  }, []);
+
+  if (isChecking) return <Loader />;
+
+  if (!token || !isTokenValid(token)) {
+    return <Navigate to="/Account/login" replace />;
+  }
+
+  const redirectPath = getDashboardPath(userRole);
+  return <Navigate to={redirectPath} replace />;
 };
 
 // --- App Routes ---
@@ -175,11 +176,10 @@ export default function App() {
           <Route path="Classes/Manage" element={<ManageClasses />} />
           <Route path="Students/Add" element={<AddStudents />} />
           <Route path="Students/Manage" element={<ManageStudents />} />
-          <Route path="Students/Add" element={<AddStudents />} />
           <Route path="Students/:id" element={<ViewStudent />} />
           <Route path="Users/Add" element={<AddUsers />} />
           <Route path="Users/Manage" element={<Users />} />
-          <Route index element={<Navigate to="Dashboard" replace />} />
+          <Route path="*" element={<Navigate to="Dashboard" replace />} />
         </Route>
 
         {/* Student Routes */}
@@ -195,7 +195,7 @@ export default function App() {
           <Route path="MyCourses" element={<Blank />} />
           <Route path="Assignments" element={<Blank />} />
           <Route path="Messages" element={<Blank />} />
-          <Route index element={<Navigate to="Dashboard" replace />} />
+          <Route path="*" element={<Navigate to="Dashboard" replace />} />
         </Route>
 
         {/* Teacher Routes */}
@@ -211,7 +211,7 @@ export default function App() {
           <Route path="MyClasses" element={<Blank />} />
           <Route path="Assignments" element={<Blank />} />
           <Route path="Reports" element={<Blank />} />
-          <Route index element={<Navigate to="Dashboard" replace />} />
+          <Route path="*" element={<Navigate to="Dashboard" replace />} />
         </Route>
 
         {/* Parent Routes */}
@@ -227,7 +227,7 @@ export default function App() {
           <Route path="ChildrenProgress" element={<Blank />} />
           <Route path="Messages" element={<Blank />} />
           <Route path="Reports" element={<Blank />} />
-          <Route index element={<Navigate to="Dashboard" replace />} />
+          <Route path="*" element={<Navigate to="Dashboard" replace />} />
         </Route>
 
         {/* Common routes accessible to all authenticated users */}
@@ -242,6 +242,7 @@ export default function App() {
           <Route path="profile" element={<UserProfiles />} />
           <Route path="blank" element={<Blank />} />
           <Route index element={<Home />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
 
         {/* Root redirect */}

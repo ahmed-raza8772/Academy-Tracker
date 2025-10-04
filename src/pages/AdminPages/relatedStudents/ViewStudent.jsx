@@ -19,8 +19,8 @@ export default function ViewStudent() {
     try {
       setDownloading(true);
 
-      // Fetch complete student data
-      const studentResponse = await fetch(`${API_URL}/api/v1/student`, {
+      // Fetch specific student data by ID
+      const studentResponse = await fetch(`${API_URL}/api/v1/student/${id}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -29,86 +29,107 @@ export default function ViewStudent() {
 
       if (!studentResponse.ok) throw new Error("Failed to fetch student data");
 
-      const studentsData = await studentResponse.json();
-      const student = Array.isArray(studentsData)
-        ? studentsData.find((s) => String(s._id) === String(id))
-        : null;
+      const student = await studentResponse.json();
 
       if (!student) throw new Error("Student not found");
 
-      // Fetch additional data
-      const [classesData, coursesData, busesData, schoolsData] =
-        await Promise.all([
-          fetch(`${API_URL}/api/v1/class/`, {
+      // Fetch additional data using specific endpoints
+      const fetchPromises = [];
+
+      // Fetch classes data for the student
+      if (student.classRef && student.classRef.length > 0) {
+        const classPromises = student.classRef.map((classId) =>
+          fetch(`${API_URL}/api/v1/class/${classId}`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-          }).then((res) => (res.ok ? res.json() : [])),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null)
+        );
+        fetchPromises.push(Promise.all(classPromises));
+      } else {
+        fetchPromises.push(Promise.resolve([]));
+      }
 
-          fetch(`${API_URL}/api/v1/course/`, {
+      // Fetch courses data for the student
+      if (student.courses && student.courses.length > 0) {
+        const coursePromises = student.courses.map((courseId) =>
+          fetch(`${API_URL}/api/v1/course/${courseId}`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-          }).then((res) => (res.ok ? res.json() : [])),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null)
+        );
+        fetchPromises.push(Promise.all(coursePromises));
+      } else {
+        fetchPromises.push(Promise.resolve([]));
+      }
 
-          fetch(`${API_URL}/api/v1/bus/`, {
+      // Fetch bus data if available
+      if (student.bus) {
+        fetchPromises.push(
+          fetch(`${API_URL}/api/v1/bus/${student.bus}`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-          }).then((res) => (res.ok ? res.json() : [])),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null)
+        );
+      } else {
+        fetchPromises.push(Promise.resolve(null));
+      }
 
-          Promise.resolve([
-            {
-              _id: "school1",
-              schoolName: "Seoul International School",
-              address: "123 Gangnam-gu, Seoul",
-              phone: "+82-2-123-4567",
-              email: "info@seoulis.edu",
-            },
-            {
-              _id: "school2",
-              schoolName: "Busan Global Academy",
-              address: "456 Haeundae-gu, Busan",
-              phone: "+82-51-765-4321",
-              email: "contact@busanglobal.edu",
-            },
-            {
-              _id: "school3",
-              schoolName: "Daegu English Academy",
-              address: "789 Jung-gu, Daegu",
-              phone: "+82-53-888-9999",
-              email: "admin@daeguenglish.edu",
-            },
-            {
-              _id: "school4",
-              schoolName: "Incheon Language School",
-              address: "321 Yeonsu-gu, Incheon",
-              phone: "+82-32-555-7777",
-              email: "info@incheonlang.edu",
-            },
-          ]),
-        ]);
+      // School data (currently hardcoded, but you can replace with API call)
+      fetchPromises.push(
+        Promise.resolve([
+          {
+            _id: "school1",
+            schoolName: "Seoul International School",
+            address: "123 Gangnam-gu, Seoul",
+            phone: "+82-2-123-4567",
+            email: "info@seoulis.edu",
+          },
+          {
+            _id: "school2",
+            schoolName: "Busan Global Academy",
+            address: "456 Haeundae-gu, Busan",
+            phone: "+82-51-765-4321",
+            email: "contact@busanglobal.edu",
+          },
+          {
+            _id: "school3",
+            schoolName: "Daegu English Academy",
+            address: "789 Jung-gu, Daegu",
+            phone: "+82-53-888-9999",
+            email: "admin@daeguenglish.edu",
+          },
+          {
+            _id: "school4",
+            schoolName: "Incheon Language School",
+            address: "321 Yeonsu-gu, Incheon",
+            phone: "+82-32-555-7777",
+            email: "info@incheonlang.edu",
+          },
+        ])
+      );
+
+      const [classesData, coursesData, studentBus, schoolsData] =
+        await Promise.all(fetchPromises);
 
       // Process data
       const studentClasses = Array.isArray(classesData)
-        ? classesData.filter((cls) =>
-            student.classRef?.includes(String(cls._id))
-          )
+        ? classesData.filter((cls) => cls !== null)
         : [];
-
       const studentCourses = Array.isArray(coursesData)
-        ? coursesData.filter((course) =>
-            student.courses?.includes(String(course._id))
-          )
+        ? coursesData.filter((course) => course !== null)
         : [];
-
-      const studentBus =
-        Array.isArray(busesData) && student.bus
-          ? busesData.find((bus) => String(bus._id) === String(student.bus))
-          : null;
 
       const studentSchool =
         Array.isArray(schoolsData) && student.school
@@ -574,7 +595,7 @@ export default function ViewStudent() {
       Sun: "Sun",
     };
     const selectedDays = Object.entries(days)
-      .filter(([_, isSelected]) => isSelected)
+      .filter(([, isSelected]) => isSelected)
       .map(([day]) => dayMap[day] || day)
       .join(", ");
     return selectedDays || "No days selected";
