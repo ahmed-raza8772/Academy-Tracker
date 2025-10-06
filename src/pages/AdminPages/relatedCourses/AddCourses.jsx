@@ -10,14 +10,13 @@ import Loader from "../../../components/common/Loader";
 import Label from "../../../components/form/Label";
 import { Link } from "react-router";
 
-export default function AddClasses() {
+export default function AddCourses() {
   const { token } = useAuthStore();
   const API_URL = import.meta.env.VITE_API_URL;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    classCode: "",
-    className: "",
-    grade: "",
+    courseCode: "",
+    courseName: "",
     status: true, // Default to active
   });
 
@@ -39,11 +38,7 @@ export default function AddClasses() {
   };
 
   const handleSubmit = async (e) => {
-    if (
-      !formData.classCode.trim() ||
-      !formData.className.trim() ||
-      !formData.grade.trim()
-    ) {
+    if (!formData.courseCode.trim() || !formData.courseName.trim()) {
       setAlert({
         variant: "error",
         title: "Error",
@@ -61,15 +56,14 @@ export default function AddClasses() {
     try {
       // Prepare data for API - status is already boolean
       const apiData = {
-        classCode: formData.classCode.trim(),
-        className: formData.className.trim(),
-        grade: formData.grade.trim(),
+        courseCode: formData.courseCode.trim(),
+        courseName: formData.courseName.trim(),
         status: formData.status, // This will be true or false
       };
 
       console.log("Sending data to backend:", apiData);
 
-      const response = await fetch(`${API_URL}/api/v1/Class/create`, {
+      const response = await fetch(`${API_URL}/api/v1/course/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,7 +73,7 @@ export default function AddClasses() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create class");
+        throw new Error("Failed to create course");
       }
 
       const data = await response.json();
@@ -88,7 +82,7 @@ export default function AddClasses() {
       setAlert({
         variant: "success",
         title: "Success",
-        message: "Class has been created successfully!",
+        message: "Course has been created successfully!",
       });
 
       // ⏳ Auto-hide after 3 seconds
@@ -96,9 +90,9 @@ export default function AddClasses() {
 
       // Reset form (keep status as true for next entry)
       setFormData({
-        classCode: "",
-        className: "",
-        grade: "",
+        courseCode: "",
+        courseName: "",
+
         status: true,
       });
     } catch (error) {
@@ -121,8 +115,8 @@ export default function AddClasses() {
   return (
     <div>
       <PageMeta
-        title="Add Classes | AE EduTracks"
-        description="This is where you can add classes"
+        title="Add Courses | AE EduTracks"
+        description="This is where you can add courses"
       />
       <PageBreadcrumb pageTitle="Add Class" />
 
@@ -130,7 +124,7 @@ export default function AddClasses() {
         {/* Clean Back Link - No borders, no extra styling */}
         <div className="mb-6">
           <Link
-            to="/Admin/Classes/Manage"
+            to="/Admin/Courses/Manage"
             className="inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           >
             <ChevronLeftIcon className="w-4 h-4" />
@@ -139,7 +133,7 @@ export default function AddClasses() {
         </div>
 
         <div className="mx-auto w-full max-w-[630px]">
-          <ComponentCard title="Class Details">
+          <ComponentCard title="Course Details">
             {/* ✅ render alert when state exists */}
             {alert && (
               <div className="mb-4">
@@ -154,40 +148,27 @@ export default function AddClasses() {
 
             <form className="space-y-5">
               <div>
-                <Label htmlFor="classCode" required>
-                  Class Code
+                <Label htmlFor="courseCode" required>
+                  Course Code
                 </Label>
                 <Input
-                  id="classCode"
-                  name="classCode"
-                  placeholder="Enter Class Code"
-                  value={formData.classCode}
+                  id="courseCode"
+                  name="courseCode"
+                  placeholder="Enter Course Code"
+                  value={formData.courseCode}
                   onChange={handleChange}
                 />
               </div>
 
               <div>
-                <Label htmlFor="className" required>
-                  Class Name
+                <Label htmlFor="courseName" required>
+                  Course Name
                 </Label>
                 <Input
-                  id="className"
-                  name="className"
-                  placeholder="Enter Class Name"
-                  value={formData.className}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="grade" required>
-                  Grade
-                </Label>
-                <Input
-                  id="grade"
-                  name="grade"
-                  placeholder="Enter Grade"
-                  value={formData.grade}
+                  id="courseName"
+                  name="courseName"
+                  placeholder="Enter Course Name"
+                  value={formData.courseName}
                   onChange={handleChange}
                 />
               </div>
@@ -209,8 +190,8 @@ export default function AddClasses() {
                 </select>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {formData.status
-                    ? "This class will be active and available for student enrollment"
-                    : "This class will be inactive and not available for enrollment"}
+                    ? "This Course will be active and available for student enrollment"
+                    : "This Course will be inactive and not available for enrollment"}
                 </p>
               </div>
 
@@ -241,10 +222,10 @@ export default function AddClasses() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Creating Class...
+                    Creating Course...
                   </span>
                 ) : (
-                  "Save Class"
+                  "Save Course"
                 )}
               </button>
             </form>

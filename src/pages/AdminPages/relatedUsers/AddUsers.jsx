@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import PageMeta from "../../../components/common/PageMeta";
-import Input from "../../../components/form/input/InputField"; // Adjust path as needed
+import Input from "../../../components/form/input/InputField";
 import SuccessMessage from "../../../components/ui/success/SuccessMessage";
 
 export default function AddUsers() {
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     fullname: "",
     email: "",
+    username: "",
     password: "",
     role: "",
   });
@@ -15,6 +18,7 @@ export default function AddUsers() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [, setIsPrefilled] = useState(false);
   const API_URL = import.meta.env.VITE_API_URL;
 
   const roles = [
@@ -23,6 +27,23 @@ export default function AddUsers() {
     { value: "parent", label: "Parent" },
     { value: "teacher", label: "Teacher" },
   ];
+
+  // Pre-fill form from URL parameters when component mounts
+  useEffect(() => {
+    const email = searchParams.get("email");
+    const username = searchParams.get("username");
+    const role = searchParams.get("role");
+
+    if (email) {
+      setFormData((prev) => ({
+        ...prev,
+        email: email,
+        username: username || email,
+        role: role || "student",
+      }));
+      setIsPrefilled(true);
+    }
+  }, [searchParams]);
 
   const validateField = (name, value) => {
     const errors = { ...fieldErrors };
@@ -43,6 +64,13 @@ export default function AddUsers() {
           errors.email = "Please enter a valid email address";
         } else {
           delete errors.email;
+        }
+        break;
+      case "username":
+        if (!value.trim()) {
+          errors.username = "Username is required";
+        } else {
+          delete errors.username;
         }
         break;
       case "password":
@@ -71,10 +99,20 @@ export default function AddUsers() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    setFormData((prev) => {
+      const updatedFormData = {
+        ...prev,
+        [name]: value,
+      };
+
+      // Automatically set username to match email when email changes
+      if (name === "email") {
+        updatedFormData.username = value;
+      }
+
+      return updatedFormData;
+    });
 
     // Validate field on change
     validateField(name, value);
@@ -100,6 +138,10 @@ export default function AddUsers() {
       errors.email = "Please enter a valid email address";
     }
 
+    if (!formData.username.trim()) {
+      errors.username = "Username is required";
+    }
+
     if (!formData.password) {
       errors.password = "Password is required";
     } else if (formData.password.length < 6) {
@@ -123,12 +165,23 @@ export default function AddUsers() {
     }
 
     try {
+      // Prepare data for API - include username
+      const userData = {
+        fullname: formData.fullname.trim(),
+        email: formData.email.trim(),
+        username: formData.username.trim(), // Send username to backend
+        password: formData.password,
+        role: formData.role,
+      };
+
+      console.log("Sending user data:", userData);
+
       const response = await fetch(`${API_URL}/api/v1/createUser`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(userData),
       });
 
       const data = await response.json();
@@ -142,10 +195,12 @@ export default function AddUsers() {
       setFormData({
         fullname: "",
         email: "",
+        username: "",
         password: "",
         role: "",
       });
       setFieldErrors({});
+      setIsPrefilled(false);
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -265,6 +320,38 @@ export default function AddUsers() {
               )}
             </div>
 
+            {/* Username - Auto-filled from email */}
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Username *
+              </label>
+              <Input
+                type="text"
+                id="username"
+                name="username"
+                placeholder="Username will auto-fill from email"
+                value={formData.username}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={fieldErrors.username}
+                success={formData.username && !fieldErrors.username}
+                disabled={loading}
+                readOnly={true} // Make it read-only since it auto-fills from email
+                className="bg-gray-50 cursor-not-allowed dark:bg-gray-800/50" // Additional styling for read-only state
+              />
+              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                Username is automatically set to match the email address
+              </p>
+              {fieldErrors.username && (
+                <p className="mt-1.5 text-xs text-error-500">
+                  {fieldErrors.username}
+                </p>
+              )}
+            </div>
+
             {/* Password */}
             <div>
               <label
@@ -378,6 +465,7 @@ export default function AddUsers() {
             <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
               <li>• Full Name - User's complete name</li>
               <li>• Email - Valid email address</li>
+              <li>• Username - Automatically matches email</li>
               <li>• Password - Minimum 6 characters</li>
               <li>• Role - User's role in the system</li>
             </ul>

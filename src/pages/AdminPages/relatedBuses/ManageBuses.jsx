@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
-import { Link } from "react-router";
 import PageMeta from "../../../components/common/PageMeta";
 import ComponentCard from "../../../components/common/ComponentCard";
 import {
@@ -12,6 +11,7 @@ import {
 } from "../../../components/ui/table";
 import Input from "../../../components/form/input/InputField";
 import Loader from "../../../components/common/Loader";
+import { Link } from "react-router";
 
 import { Modal } from "../../../components/ui/modal";
 import Label from "../../../components/form/Label";
@@ -21,8 +21,8 @@ import Select from "../../../components/form/Select";
 import ConfirmationModal from "../../../components/form/ConfirmationModal";
 import { useAuthStore } from "../../../hooks/useAuth";
 
-export default function ManageClasses() {
-  const [classes, setClasses] = useState([]);
+export default function ManageBuses() {
+  const [buses, setBuses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -30,28 +30,29 @@ export default function ManageClasses() {
 
   const API_URL = import.meta.env.VITE_API_URL;
   const { token } = useAuthStore();
-  const [selectedClass, setSelectedClass] = useState([]);
+  const [selectedBus, setSelectedBus] = useState(null);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [alert, setAlert] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [classToDelete, setClassToDelete] = useState(null);
-  //for update modal
+  const [busToDelete, setBusToDelete] = useState(null);
+
+  // For update modal
   const [formData, setFormData] = useState({
-    classCode: "",
-    className: "",
-    grade: "",
+    busName: "",
+    busNumber: "",
+    status: true,
   });
 
-  const options = [
+  const statusOptions = [
     { value: "true", label: "Active" },
-    { value: "false", label: "Not Active" },
+    { value: "false", label: "Inactive" },
   ];
 
-  const fetchClasses = async () => {
+  const fetchBuses = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/v1/Class/`, {
+      const response = await fetch(`${API_URL}/api/v1/bus/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -60,22 +61,21 @@ export default function ManageClasses() {
       });
       const data = await response.json();
 
-      setClasses(Array.isArray(data) ? data : []);
-
-      console.log(data);
+      setBuses(Array.isArray(data) ? data : []);
+      console.log("Buses data:", data);
     } catch (error) {
-      console.error("Error fetching classes:", error);
+      console.error("Error fetching buses:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchClasses();
+    fetchBuses();
   }, [API_URL, token]);
 
-  const handleView = (classItem) => {
-    setSelectedClass(classItem);
+  const handleView = (bus) => {
+    setSelectedBus(bus);
     setIsViewOpen(true);
   };
 
@@ -84,66 +84,62 @@ export default function ManageClasses() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleUpdate = (classItem) => {
-    setSelectedClass(classItem);
+  const handleUpdate = (bus) => {
+    setSelectedBus(bus);
     setFormData({
-      classCode: classItem.classCode,
-      className: classItem.className,
-      grade: classItem.grade,
-      status: classItem.status, // true or false
+      busName: bus.busName || "",
+      busNumber: bus.busNumber || "",
+      status: bus.status !== undefined ? bus.status : true,
     });
     setIsUpdateOpen(true);
   };
 
-  const handleDelete = (classItem) => {
-    setClassToDelete(classItem);
+  const handleDelete = (bus) => {
+    setBusToDelete(bus);
     setConfirmOpen(true);
   };
 
   const confirmDelete = async () => {
     setLoading(true);
-    if (!classToDelete) return;
+    if (!busToDelete) return;
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/v1/Class/${classToDelete._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            classCode: classToDelete.classCode,
-            className: classToDelete.className,
-            grade: classToDelete.grade,
-            status: false, // Soft delete
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/bus/${busToDelete._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          busName: busToDelete.busName,
+          busNumber: busToDelete.busNumber,
+          status: false, // Soft delete
+        }),
+      });
 
       const data = await response.json();
 
       if (response.ok) {
-        setClasses((prev) =>
-          prev.map((c) =>
-            c._id === classToDelete._id ? { ...c, status: false } : c
+        // Update bus status in the list
+        setBuses((prev) =>
+          prev.map((b) =>
+            b._id === busToDelete._id ? { ...b, status: false } : b
           )
         );
 
         setAlert({
           variant: "info",
           title: "Success",
-          message: "Class has been deactivated successfully!",
+          message: "Bus has been deactivated successfully!",
         });
         setTimeout(() => setAlert(null), 3000);
-        console.log("Class status updated:", data);
+        console.log("Bus status updated:", data);
       } else {
         console.error("Failed to update status:", data);
         setAlert({
           variant: "error",
           title: "Error",
-          message: "Failed deactivating Class!",
+          message: "Failed deactivating bus!",
         });
         setTimeout(() => setAlert(null), 3000);
       }
@@ -152,13 +148,13 @@ export default function ManageClasses() {
       setAlert({
         variant: "error",
         title: "Error",
-        message: "Error deactivating Class!",
+        message: "Error deactivating bus!",
       });
       setTimeout(() => setAlert(null), 3000);
     } finally {
       setLoading(false);
       setConfirmOpen(false);
-      setClassToDelete(null);
+      setBusToDelete(null);
     }
   };
 
@@ -172,33 +168,29 @@ export default function ManageClasses() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const updatedClass = {
-        classCode: formData.classCode,
-        className: formData.className,
-        grade: formData.grade,
+      const updatedBus = {
+        busName: formData.busName.trim(),
+        busNumber: formData.busNumber.trim(),
         status: formData.status, // boolean true/false
       };
 
-      const response = await fetch(
-        `${API_URL}/api/v1/Class/${selectedClass._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatedClass),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/bus/${selectedBus._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedBus),
+      });
 
-      if (!response.ok) throw new Error("Failed to update class");
+      if (!response.ok) throw new Error("Failed to update bus");
 
       const data = await response.json();
-      console.log("Updated class:", data);
+      console.log("Updated bus:", data);
 
-      setClasses((prev) =>
-        prev.map((cls) =>
-          cls._id === selectedClass._id ? { ...cls, ...updatedClass } : cls
+      setBuses((prev) =>
+        prev.map((bus) =>
+          bus._id === selectedBus._id ? { ...bus, ...updatedBus } : bus
         )
       );
 
@@ -206,15 +198,15 @@ export default function ManageClasses() {
       setAlert({
         variant: "success",
         title: "Success",
-        message: "Class has been updated successfully!",
+        message: "Bus has been updated successfully!",
       });
       setTimeout(() => setAlert(null), 3000);
     } catch (error) {
-      console.error("Error updating class:", error);
+      console.error("Error updating bus:", error);
       setAlert({
         variant: "error",
         title: "Error",
-        message: "Error updating class!",
+        message: "Error updating bus!",
       });
       setTimeout(() => setAlert(null), 3000);
     } finally {
@@ -223,33 +215,29 @@ export default function ManageClasses() {
   };
 
   // Handle table row click
-  const handleTableRowClick = (classItem) => {
-    handleView(classItem);
+  const handleTableRowClick = (bus) => {
+    handleView(bus);
   };
 
   // Prevent action buttons from triggering row click
-  const handleActionClick = (e, action, classItem) => {
+  const handleActionClick = (e, action, bus) => {
     e.stopPropagation();
-    action(classItem);
+    action(bus);
   };
 
-  // 🔍 Search
+  // 🔍 Search - simplified for buses
   const filteredData = useMemo(() => {
+    if (!searchTerm.trim()) return buses;
+
     const term = searchTerm.toLowerCase().trim();
-    return classes.filter((row) =>
-      Object.values(row).some((val) =>
-        typeof val === "object"
-          ? Object.values(val).some((nested) =>
-              Array.isArray(nested)
-                ? nested.some((item) =>
-                    String(item).toLowerCase().includes(term)
-                  )
-                : String(nested).toLowerCase().includes(term)
-            )
-          : String(val).toLowerCase().includes(term)
-      )
-    );
-  }, [searchTerm, classes]);
+    return buses.filter((bus) => {
+      return (
+        bus.busName?.toLowerCase().includes(term) ||
+        bus.busNumber?.toLowerCase().includes(term) ||
+        (bus.status ? "active" : "inactive").includes(term)
+      );
+    });
+  }, [searchTerm, buses]);
 
   // Calculate total number of pages
   const totalPages = Math.max(Math.ceil(filteredData.length / rowsPerPage), 1);
@@ -274,15 +262,15 @@ export default function ManageClasses() {
   return (
     <div>
       <PageMeta
-        title="Manage Classes | AE EduTracks"
-        description="Manage class information and student details from AE EduTracks portal"
+        title="Manage Buses | AE EduTracks"
+        description="Manage bus information and transportation details from AE EduTracks portal"
       />
-      <PageBreadcrumb pageTitle="Classes" />
+      <PageBreadcrumb pageTitle="Buses" />
 
       <div className="space-y-6">
-        {/* Add Class Button */}
+        {/* Add Bus Button */}
         <Link
-          to="/Admin/Classes/Add"
+          to="/Admin/Buses/Add"
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 dark:focus:ring-offset-gray-900"
         >
           <svg
@@ -298,23 +286,23 @@ export default function ManageClasses() {
               d="M12 6v6m0 0v6m0-6h6m-6 0H6"
             />
           </svg>
-          Add New Class
+          Add New Bus
         </Link>
-        <ComponentCard title="List of Classes">
+        <ComponentCard title="List of Buses">
           {/* Search Bar */}
-
           <div className="p-4 border-b border-gray-200 dark:border-white/[0.05]">
             <Input
               type="text"
-              placeholder="Search by name, project, role, or status..."
+              placeholder="Search by bus name, number, or status..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setPage(0); // reset page on search
+                setPage(0);
               }}
               className="sm:w-1/3"
             />
           </div>
+
           {alert && (
             <div className="mb-4">
               <Alert
@@ -325,6 +313,7 @@ export default function ManageClasses() {
               />
             </div>
           )}
+
           {/* Table */}
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
@@ -336,19 +325,13 @@ export default function ManageClasses() {
                         isHeader
                         className="px-5 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider sm:px-6"
                       >
-                        Class Code
+                        Bus Name
                       </TableCell>
                       <TableCell
                         isHeader
                         className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
                       >
-                        Class Name
-                      </TableCell>
-                      <TableCell
-                        isHeader
-                        className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
-                      >
-                        Grade
+                        Bus Number
                       </TableCell>
                       <TableCell
                         isHeader
@@ -367,30 +350,27 @@ export default function ManageClasses() {
 
                   <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                     {paginatedData.length > 0 ? (
-                      paginatedData.map((order, index) => (
+                      paginatedData.map((bus, index) => (
                         <TableRow
-                          key={page * rowsPerPage + index}
-                          onClick={() => handleTableRowClick(order)}
+                          key={bus._id || index}
+                          onClick={() => handleTableRowClick(bus)}
                           className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
                         >
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                            {order.classCode}
+                            {bus.busName}
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                            {order.className}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                            {order.grade}
+                            {bus.busNumber}
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                             <span
                               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                order.status
+                                bus.status
                                   ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                   : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                               }`}
                             >
-                              {order.status ? "Active" : "Inactive"}
+                              {bus.status ? "Active" : "Inactive"}
                             </span>
                           </TableCell>
 
@@ -402,10 +382,10 @@ export default function ManageClasses() {
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={(e) =>
-                                  handleActionClick(e, handleUpdate, order)
+                                  handleActionClick(e, handleUpdate, bus)
                                 }
                                 className="flex items-center justify-center p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-                                title="Edit Class"
+                                title="Edit Bus"
                               >
                                 <svg
                                   className="w-5 h-5"
@@ -423,10 +403,10 @@ export default function ManageClasses() {
                               </button>
                               <button
                                 onClick={(e) =>
-                                  handleActionClick(e, handleDelete, order)
+                                  handleActionClick(e, handleDelete, bus)
                                 }
                                 className="flex items-center justify-center p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500"
-                                title="Delete Class"
+                                title="Delete Bus"
                               >
                                 <svg
                                   className="w-5 h-5"
@@ -448,10 +428,10 @@ export default function ManageClasses() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={4}
                           className="py-6 text-center text-gray-500 dark:text-gray-400"
                         >
-                          No Records.
+                          No buses found.
                         </TableCell>
                       </TableRow>
                     )}
@@ -463,7 +443,6 @@ export default function ManageClasses() {
 
           {/* Pagination Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-3">
-            {/* Rows per page */}
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 text-sm">
               <span>Rows per page:</span>
               <select
@@ -482,7 +461,6 @@ export default function ManageClasses() {
               </select>
             </div>
 
-            {/* Pagination buttons */}
             <div className="flex items-center space-x-2">
               <button
                 disabled={page === 0}
@@ -504,6 +482,7 @@ export default function ManageClasses() {
             </div>
           </div>
         </ComponentCard>
+
         {/* Update Modal */}
         <Modal
           isOpen={isUpdateOpen}
@@ -513,50 +492,49 @@ export default function ManageClasses() {
           <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
             <div className="px-2 pr-14">
               <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-                Edit Class
+                Edit Bus
               </h4>
               <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-                Update class details to keep your application up-to-date.
+                Update bus details to keep your transportation system
+                up-to-date.
               </p>
             </div>
             <form className="flex flex-col">
               <div className="px-2 overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div>
-                    <Label>Class Code</Label>
+                    <Label htmlFor="busName">Bus Name</Label>
                     <Input
                       type="text"
-                      name="classCode"
-                      value={formData.classCode}
+                      name="busName"
+                      value={formData.busName}
                       onChange={handleChange}
+                      placeholder="Enter bus name"
                     />
                   </div>
                   <div>
-                    <Label>Class Name</Label>
+                    <Label htmlFor="busNumber">Bus Number</Label>
                     <Input
                       type="text"
-                      name="className"
-                      value={formData.className}
+                      name="busNumber"
+                      value={formData.busNumber}
                       onChange={handleChange}
+                      placeholder="Enter bus number"
                     />
                   </div>
-                  <div>
-                    <Label>Grade</Label>
-                    <Input
-                      type="text"
-                      name="grade"
-                      value={formData.grade}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div>
-                    <Label>Status</Label>
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="status">Status</Label>
                     <Select
-                      options={options}
+                      options={statusOptions}
                       placeholder="Choose a status"
                       onChange={handleSelectChange}
-                      defaultValue={formData.status ? "true" : "false"} // preselect value
+                      defaultValue={formData.status ? "true" : "false"}
                     />
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {formData.status
+                        ? "This bus will be active and available for student transportation"
+                        : "This bus will be inactive and not available for transportation"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -568,8 +546,8 @@ export default function ManageClasses() {
                 >
                   Close
                 </Button>
-                <Button size="sm" onClick={handleSave}>
-                  Save Changes
+                <Button size="sm" onClick={handleSave} disabled={loading}>
+                  {loading ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </form>
@@ -585,45 +563,41 @@ export default function ManageClasses() {
           <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
             <div className="px-2 pr-14">
               <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-                Class Details
+                Bus Details
               </h4>
               <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-                Here are the details of the class.
+                Here are the details of the bus.
               </p>
             </div>
             <div className="px-2 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2 ">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                 <div>
-                  <Label>Class Code</Label>
+                  <Label>Bus Name</Label>
                   <Input
                     type="text"
-                    value={selectedClass?.classCode || ""}
+                    value={selectedBus?.busName || ""}
                     readOnly
                   />
                 </div>
                 <div>
-                  <Label>Class Name</Label>
+                  <Label>Bus Number</Label>
                   <Input
                     type="text"
-                    value={selectedClass?.className || ""}
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <Label>Grade</Label>
-                  <Input
-                    type="text"
-                    value={selectedClass?.grade || ""}
+                    value={selectedBus?.busNumber || ""}
                     readOnly
                   />
                 </div>
                 <div>
                   <Label>Status</Label>
-                  <Input
-                    type="text"
-                    value={selectedClass?.status ? "Active" : "Inactive"}
-                    readOnly
-                  />
+                  <div
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
+                      selectedBus?.status
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                    }`}
+                  >
+                    {selectedBus?.status ? "Active" : "Inactive"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -644,8 +618,8 @@ export default function ManageClasses() {
           isOpen={confirmOpen}
           onClose={() => setConfirmOpen(false)}
           onConfirm={confirmDelete}
-          title="Delete Class"
-          message={`Are you sure you want to delete class ${classToDelete?.classCode}? This action cannot be undone.`}
+          title="Deactivate Bus"
+          message={`Are you sure you want to deactivate bus ${busToDelete?.busName} (${busToDelete?.busNumber})? This action cannot be undone.`}
         />
       </div>
     </div>

@@ -10,14 +10,13 @@ import Loader from "../../../components/common/Loader";
 import Label from "../../../components/form/Label";
 import { Link } from "react-router";
 
-export default function AddClasses() {
+export default function AddBuses() {
   const { token } = useAuthStore();
   const API_URL = import.meta.env.VITE_API_URL;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    classCode: "",
-    className: "",
-    grade: "",
+    busName: "",
+    busNumber: "",
     status: true, // Default to active
   });
 
@@ -39,11 +38,7 @@ export default function AddClasses() {
   };
 
   const handleSubmit = async (e) => {
-    if (
-      !formData.classCode.trim() ||
-      !formData.className.trim() ||
-      !formData.grade.trim()
-    ) {
+    if (!formData.busName.trim() || !formData.busNumber.trim()) {
       setAlert({
         variant: "error",
         title: "Error",
@@ -61,15 +56,14 @@ export default function AddClasses() {
     try {
       // Prepare data for API - status is already boolean
       const apiData = {
-        classCode: formData.classCode.trim(),
-        className: formData.className.trim(),
-        grade: formData.grade.trim(),
+        busName: formData.busName.trim(),
+        busNumber: formData.busNumber.trim(),
         status: formData.status, // This will be true or false
       };
 
       console.log("Sending data to backend:", apiData);
 
-      const response = await fetch(`${API_URL}/api/v1/Class/create`, {
+      const response = await fetch(`${API_URL}/api/v1/bus/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,7 +73,7 @@ export default function AddClasses() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create class");
+        throw new Error("Failed to create bus");
       }
 
       const data = await response.json();
@@ -88,7 +82,7 @@ export default function AddClasses() {
       setAlert({
         variant: "success",
         title: "Success",
-        message: "Class has been created successfully!",
+        message: "Bus has been created successfully!",
       });
 
       // ⏳ Auto-hide after 3 seconds
@@ -96,17 +90,16 @@ export default function AddClasses() {
 
       // Reset form (keep status as true for next entry)
       setFormData({
-        classCode: "",
-        className: "",
-        grade: "",
+        busName: "",
+        busNumber: "",
         status: true,
       });
     } catch (error) {
-      console.error("Error creating class:", error);
+      console.error("Error creating bus:", error);
       setAlert({
         variant: "error",
         title: "Error",
-        message: "Failed to add class. Try again!",
+        message: "Failed to add bus. Try again!",
       });
 
       // ⏳ Auto-hide after 3 seconds
@@ -121,25 +114,25 @@ export default function AddClasses() {
   return (
     <div>
       <PageMeta
-        title="Add Classes | AE EduTracks"
-        description="This is where you can add classes"
+        title="Add Bus | AE EduTracks"
+        description="This is where you can add buses to the transportation system"
       />
-      <PageBreadcrumb pageTitle="Add Class" />
+      <PageBreadcrumb pageTitle="Add Bus" />
 
       <div className="min-h-screen rounded-2xl border border-gray-200 bg-white px-5 py-7 dark:border-gray-800 dark:bg-white/[0.03] xl:px-10 xl:py-12">
         {/* Clean Back Link - No borders, no extra styling */}
         <div className="mb-6">
           <Link
-            to="/Admin/Classes/Manage"
+            to="/Admin/Buses/Manage"
             className="inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           >
             <ChevronLeftIcon className="w-4 h-4" />
-            Back
+            Back to Buses
           </Link>
         </div>
 
         <div className="mx-auto w-full max-w-[630px]">
-          <ComponentCard title="Class Details">
+          <ComponentCard title="Bus Details">
             {/* ✅ render alert when state exists */}
             {alert && (
               <div className="mb-4">
@@ -154,42 +147,35 @@ export default function AddClasses() {
 
             <form className="space-y-5">
               <div>
-                <Label htmlFor="classCode" required>
-                  Class Code
+                <Label htmlFor="busName" required>
+                  Bus Name
                 </Label>
                 <Input
-                  id="classCode"
-                  name="classCode"
-                  placeholder="Enter Class Code"
-                  value={formData.classCode}
+                  id="busName"
+                  name="busName"
+                  placeholder="Enter Bus Name (e.g., Morning Express, City Shuttle)"
+                  value={formData.busName}
                   onChange={handleChange}
                 />
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  Give the bus a descriptive name for easy identification
+                </p>
               </div>
 
               <div>
-                <Label htmlFor="className" required>
-                  Class Name
+                <Label htmlFor="busNumber" required>
+                  Bus Number
                 </Label>
                 <Input
-                  id="className"
-                  name="className"
-                  placeholder="Enter Class Name"
-                  value={formData.className}
+                  id="busNumber"
+                  name="busNumber"
+                  placeholder="Enter Bus Number (e.g., B001, 101)"
+                  value={formData.busNumber}
                   onChange={handleChange}
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="grade" required>
-                  Grade
-                </Label>
-                <Input
-                  id="grade"
-                  name="grade"
-                  placeholder="Enter Grade"
-                  value={formData.grade}
-                  onChange={handleChange}
-                />
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  Unique identifier for the bus in your fleet
+                </p>
               </div>
 
               {/* Status Dropdown */}
@@ -209,8 +195,8 @@ export default function AddClasses() {
                 </select>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {formData.status
-                    ? "This class will be active and available for student enrollment"
-                    : "This class will be inactive and not available for enrollment"}
+                    ? "This bus will be active and available for student transportation"
+                    : "This bus will be inactive and not available for transportation"}
                 </p>
               </div>
 
@@ -241,10 +227,10 @@ export default function AddClasses() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Creating Class...
+                    Creating Bus...
                   </span>
                 ) : (
-                  "Save Class"
+                  "Save Bus"
                 )}
               </button>
             </form>

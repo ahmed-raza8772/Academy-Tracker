@@ -6,14 +6,40 @@ import UserAddressCard from "../../../components/StudentProfile/UserAddressCard"
 import { ChevronLeftIcon } from "../../../icons";
 import { Link } from "react-router";
 import { useParams } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "../../../hooks/useAuth";
 
 export default function ViewStudent() {
   const { id } = useParams();
   const [downloading, setDownloading] = useState(false);
+  const [studentData, setStudentData] = useState(null);
   const { token } = useAuthStore();
   const API_URL = import.meta.env.VITE_API_URL;
+
+  // Fetch student data when component mounts
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/v1/student/${id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const student = await response.json();
+          setStudentData(student);
+        }
+      } catch (error) {
+        console.error("Error fetching student data:", error);
+      }
+    };
+
+    if (id) {
+      fetchStudentData();
+    }
+  }, [id, token, API_URL]);
 
   const downloadStudentBiography = async () => {
     try {
@@ -601,6 +627,11 @@ export default function ViewStudent() {
     return selectedDays || "No days selected";
   };
 
+  // Get student email for credentials activation
+  const getStudentEmail = () => {
+    return studentData?.studentEmail || studentData?.parentEmail || "";
+  };
+
   return (
     <div>
       <PageMeta
@@ -621,49 +652,74 @@ export default function ViewStudent() {
             </Link>
           </div>
 
-          {/* Icon-only Download Button */}
-          <button
-            onClick={downloadStudentBiography}
-            disabled={downloading}
-            className="inline-flex items-center justify-center p-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
-            title="Download student details"
-          >
-            {downloading ? (
-              <svg
-                className="w-5 h-5 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
+          <div className="flex items-center gap-3">
+            {/* Activate Credentials Button */}
+            {getStudentEmail() && (
+              <Link
+                to={`/Admin/Users/Add?email=${encodeURIComponent(getStudentEmail())}&username=${encodeURIComponent(getStudentEmail())}&role=student`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200"
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
                   stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-            ) : (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12M12 16.5V3"
-                />
-              </svg>
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                Activate Credentials
+              </Link>
             )}
-          </button>
+
+            {/* Download Button */}
+            <button
+              onClick={downloadStudentBiography}
+              disabled={downloading}
+              className="inline-flex items-center justify-center p-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
+              title="Download student details"
+            >
+              {downloading ? (
+                <svg
+                  className="w-5 h-5 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              ) : (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12M12 16.5V3"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="space-y-6">

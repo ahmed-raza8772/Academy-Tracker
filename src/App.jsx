@@ -22,13 +22,27 @@ import Blank from "./pages/Blank";
 
 // Admin Pages
 import AdminDashboard from "./pages/AdminPages/Home";
+
+//Related Classes
 import AddClasses from "./pages/AdminPages/relatedClasses/AddClasses";
 import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
+
+//Related Courses
+import AddCourses from "./pages/AdminPages/relatedCourses/AddCourses";
+import ManageCourses from "./pages/AdminPages/relatedCourses/ManageCourses";
+
+//Related Students
 import AddStudents from "./pages/AdminPages/relatedStudents/AddStudents";
 import ManageStudents from "./pages/AdminPages/relatedStudents/ManageSudents";
 import ViewStudent from "./pages/AdminPages/relatedStudents/ViewStudent";
+
+//Related Users (login)
 import AddUsers from "./pages/AdminPages/relatedUsers/AddUsers";
 import Users from "./pages/AdminPages/relatedUsers/Users";
+
+//Related Transport
+import AddBuses from "./pages/AdminPages/relatedBuses/AddBuses";
+import ManageBuses from "./pages/AdminPages/relatedBuses/ManageBuses";
 
 // Auth store
 import { useAuthStore } from "./hooks/useAuth";
@@ -174,11 +188,15 @@ export default function App() {
           <Route path="Dashboard" element={<AdminDashboard />} />
           <Route path="Classes/Add" element={<AddClasses />} />
           <Route path="Classes/Manage" element={<ManageClasses />} />
+          <Route path="Courses/Add" element={<AddCourses />} />
+          <Route path="Courses/Manage" element={<ManageCourses />} />
           <Route path="Students/Add" element={<AddStudents />} />
           <Route path="Students/Manage" element={<ManageStudents />} />
           <Route path="Students/:id" element={<ViewStudent />} />
           <Route path="Users/Add" element={<AddUsers />} />
           <Route path="Users/Manage" element={<Users />} />
+          <Route path="Buses/Add" element={<AddBuses />} />
+          <Route path="Buses/Manage" element={<ManageBuses />} />
           <Route path="*" element={<Navigate to="Dashboard" replace />} />
         </Route>
 

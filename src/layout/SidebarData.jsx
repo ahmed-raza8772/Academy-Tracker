@@ -10,6 +10,22 @@ export const AdminSidebarData = [
     icon: <AiIcons.AiFillHome />,
   },
   {
+    name: "Users",
+    icon: <FaIcons.FaUsers />, // Represents a group of people
+    subItems: [
+      {
+        name: "Add User",
+        path: "/Admin/Users/Add",
+        icon: <FaIcons.FaUserPlus />, // Explicitly means "add a person"
+      },
+      {
+        name: "Manage Users",
+        path: "/Admin/Users/Manage",
+        icon: <FaIcons.FaUserCog />, // Represents user settings/management
+      },
+    ],
+  },
+  {
     name: "Students",
     icon: <IoIcons.IoMdPeople />,
     subItems: [
@@ -42,34 +58,41 @@ export const AdminSidebarData = [
     ],
   },
   {
-    name: "Classes",
-    icon: <FaIcons.FaSchool />,
+    name: "Classes & Courses",
+    icon: <FaIcons.FaUniversity />,
     subItems: [
       {
-        name: "Add Class",
-        path: "/Admin/Classes/Add",
-        icon: <FaIcons.FaPlusCircle />,
+        name: "Courses",
+        path: "/Admin/Courses/Manage",
+        icon: <FaIcons.FaTasks />,
       },
       {
-        name: "Manage Classes",
+        name: "Classes",
         path: "/Admin/Classes/Manage",
-        icon: <FaIcons.FaListAlt />,
+        icon: <FaIcons.FaObjectGroup />,
+      },
+    ],
+  },
+
+  {
+    name: "Transports",
+    icon: <FaIcons.FaBus />,
+    subItems: [
+      {
+        name: "Bus Fleet",
+        path: "/Admin/Buses/Manage",
+        icon: <FaIcons.FaBus />,
       },
     ],
   },
   {
-    name: "Users",
-    icon: <FaIcons.FaUsers />, // Represents a group of people
+    name: "Institution Setup",
+    icon: <FaIcons.FaUniversity />,
     subItems: [
       {
-        name: "Add User",
-        path: "/Admin/Users/Add",
-        icon: <FaIcons.FaUserPlus />, // Explicitly means "add a person"
-      },
-      {
-        name: "Manage Users",
-        path: "/Admin/Users/Manage",
-        icon: <FaIcons.FaUserCog />, // Represents user settings/management
+        name: "Schools",
+        path: "/Admin/Schools/Manage",
+        icon: <FaIcons.FaUniversity />,
       },
     ],
   },

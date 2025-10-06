@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
-import { Link } from "react-router";
 import PageMeta from "../../../components/common/PageMeta";
 import ComponentCard from "../../../components/common/ComponentCard";
 import {
@@ -12,6 +11,7 @@ import {
 } from "../../../components/ui/table";
 import Input from "../../../components/form/input/InputField";
 import Loader from "../../../components/common/Loader";
+import { Link } from "react-router";
 
 import { Modal } from "../../../components/ui/modal";
 import Label from "../../../components/form/Label";
@@ -21,8 +21,8 @@ import Select from "../../../components/form/Select";
 import ConfirmationModal from "../../../components/form/ConfirmationModal";
 import { useAuthStore } from "../../../hooks/useAuth";
 
-export default function ManageClasses() {
-  const [classes, setClasses] = useState([]);
+export default function ManageCourses() {
+  const [courses, setCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -30,28 +30,29 @@ export default function ManageClasses() {
 
   const API_URL = import.meta.env.VITE_API_URL;
   const { token } = useAuthStore();
-  const [selectedClass, setSelectedClass] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState(null);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [alert, setAlert] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [classToDelete, setClassToDelete] = useState(null);
-  //for update modal
+  const [courseToDelete, setCourseToDelete] = useState(null);
+
+  // For update modal
   const [formData, setFormData] = useState({
-    classCode: "",
-    className: "",
-    grade: "",
+    courseCode: "",
+    courseName: "",
+    status: true,
   });
 
-  const options = [
+  const statusOptions = [
     { value: "true", label: "Active" },
-    { value: "false", label: "Not Active" },
+    { value: "false", label: "Inactive" },
   ];
 
-  const fetchClasses = async () => {
+  const fetchCourses = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/v1/Class/`, {
+      const response = await fetch(`${API_URL}/api/v1/course/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -60,22 +61,21 @@ export default function ManageClasses() {
       });
       const data = await response.json();
 
-      setClasses(Array.isArray(data) ? data : []);
-
-      console.log(data);
+      setCourses(Array.isArray(data) ? data : []);
+      console.log("Courses data:", data);
     } catch (error) {
-      console.error("Error fetching classes:", error);
+      console.error("Error fetching courses:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchClasses();
+    fetchCourses();
   }, [API_URL, token]);
 
-  const handleView = (classItem) => {
-    setSelectedClass(classItem);
+  const handleView = (course) => {
+    setSelectedCourse(course);
     setIsViewOpen(true);
   };
 
@@ -84,29 +84,28 @@ export default function ManageClasses() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleUpdate = (classItem) => {
-    setSelectedClass(classItem);
+  const handleUpdate = (course) => {
+    setSelectedCourse(course);
     setFormData({
-      classCode: classItem.classCode,
-      className: classItem.className,
-      grade: classItem.grade,
-      status: classItem.status, // true or false
+      courseCode: course.courseCode || "",
+      courseName: course.courseName || "",
+      status: course.status !== undefined ? course.status : true,
     });
     setIsUpdateOpen(true);
   };
 
-  const handleDelete = (classItem) => {
-    setClassToDelete(classItem);
+  const handleDelete = (course) => {
+    setCourseToDelete(course);
     setConfirmOpen(true);
   };
 
   const confirmDelete = async () => {
     setLoading(true);
-    if (!classToDelete) return;
+    if (!courseToDelete) return;
 
     try {
       const response = await fetch(
-        `${API_URL}/api/v1/Class/${classToDelete._id}`,
+        `${API_URL}/api/v1/course/${courseToDelete._id}`,
         {
           method: "PUT",
           headers: {
@@ -114,9 +113,8 @@ export default function ManageClasses() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            classCode: classToDelete.classCode,
-            className: classToDelete.className,
-            grade: classToDelete.grade,
+            courseCode: courseToDelete.courseCode,
+            courseName: courseToDelete.courseName,
             status: false, // Soft delete
           }),
         }
@@ -125,25 +123,26 @@ export default function ManageClasses() {
       const data = await response.json();
 
       if (response.ok) {
-        setClasses((prev) =>
+        // Update course status in the list
+        setCourses((prev) =>
           prev.map((c) =>
-            c._id === classToDelete._id ? { ...c, status: false } : c
+            c._id === courseToDelete._id ? { ...c, status: false } : c
           )
         );
 
         setAlert({
           variant: "info",
           title: "Success",
-          message: "Class has been deactivated successfully!",
+          message: "Course has been deactivated successfully!",
         });
         setTimeout(() => setAlert(null), 3000);
-        console.log("Class status updated:", data);
+        console.log("Course status updated:", data);
       } else {
         console.error("Failed to update status:", data);
         setAlert({
           variant: "error",
           title: "Error",
-          message: "Failed deactivating Class!",
+          message: "Failed deactivating course!",
         });
         setTimeout(() => setAlert(null), 3000);
       }
@@ -152,13 +151,13 @@ export default function ManageClasses() {
       setAlert({
         variant: "error",
         title: "Error",
-        message: "Error deactivating Class!",
+        message: "Error deactivating course!",
       });
       setTimeout(() => setAlert(null), 3000);
     } finally {
       setLoading(false);
       setConfirmOpen(false);
-      setClassToDelete(null);
+      setCourseToDelete(null);
     }
   };
 
@@ -172,33 +171,34 @@ export default function ManageClasses() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const updatedClass = {
-        classCode: formData.classCode,
-        className: formData.className,
-        grade: formData.grade,
+      const updatedCourse = {
+        courseCode: formData.courseCode.trim(),
+        courseName: formData.courseName.trim(),
         status: formData.status, // boolean true/false
       };
 
       const response = await fetch(
-        `${API_URL}/api/v1/Class/${selectedClass._id}`,
+        `${API_URL}/api/v1/course/${selectedCourse._id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(updatedClass),
+          body: JSON.stringify(updatedCourse),
         }
       );
 
-      if (!response.ok) throw new Error("Failed to update class");
+      if (!response.ok) throw new Error("Failed to update course");
 
       const data = await response.json();
-      console.log("Updated class:", data);
+      console.log("Updated course:", data);
 
-      setClasses((prev) =>
-        prev.map((cls) =>
-          cls._id === selectedClass._id ? { ...cls, ...updatedClass } : cls
+      setCourses((prev) =>
+        prev.map((course) =>
+          course._id === selectedCourse._id
+            ? { ...course, ...updatedCourse }
+            : course
         )
       );
 
@@ -206,15 +206,15 @@ export default function ManageClasses() {
       setAlert({
         variant: "success",
         title: "Success",
-        message: "Class has been updated successfully!",
+        message: "Course has been updated successfully!",
       });
       setTimeout(() => setAlert(null), 3000);
     } catch (error) {
-      console.error("Error updating class:", error);
+      console.error("Error updating course:", error);
       setAlert({
         variant: "error",
         title: "Error",
-        message: "Error updating class!",
+        message: "Error updating course!",
       });
       setTimeout(() => setAlert(null), 3000);
     } finally {
@@ -223,33 +223,29 @@ export default function ManageClasses() {
   };
 
   // Handle table row click
-  const handleTableRowClick = (classItem) => {
-    handleView(classItem);
+  const handleTableRowClick = (course) => {
+    handleView(course);
   };
 
   // Prevent action buttons from triggering row click
-  const handleActionClick = (e, action, classItem) => {
+  const handleActionClick = (e, action, course) => {
     e.stopPropagation();
-    action(classItem);
+    action(course);
   };
 
-  // 🔍 Search
+  // 🔍 Search - simplified for courses
   const filteredData = useMemo(() => {
+    if (!searchTerm.trim()) return courses;
+
     const term = searchTerm.toLowerCase().trim();
-    return classes.filter((row) =>
-      Object.values(row).some((val) =>
-        typeof val === "object"
-          ? Object.values(val).some((nested) =>
-              Array.isArray(nested)
-                ? nested.some((item) =>
-                    String(item).toLowerCase().includes(term)
-                  )
-                : String(nested).toLowerCase().includes(term)
-            )
-          : String(val).toLowerCase().includes(term)
-      )
-    );
-  }, [searchTerm, classes]);
+    return courses.filter((course) => {
+      return (
+        course.courseCode?.toLowerCase().includes(term) ||
+        course.courseName?.toLowerCase().includes(term) ||
+        (course.status ? "active" : "inactive").includes(term)
+      );
+    });
+  }, [searchTerm, courses]);
 
   // Calculate total number of pages
   const totalPages = Math.max(Math.ceil(filteredData.length / rowsPerPage), 1);
@@ -274,15 +270,15 @@ export default function ManageClasses() {
   return (
     <div>
       <PageMeta
-        title="Manage Classes | AE EduTracks"
-        description="Manage class information and student details from AE EduTracks portal"
+        title="Manage Courses | AE EduTracks"
+        description="Manage course information and course details from AE EduTracks portal"
       />
-      <PageBreadcrumb pageTitle="Classes" />
+      <PageBreadcrumb pageTitle="Courses" />
 
       <div className="space-y-6">
-        {/* Add Class Button */}
+        {/* Add Course Button */}
         <Link
-          to="/Admin/Classes/Add"
+          to="/Admin/Courses/Add"
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 dark:focus:ring-offset-gray-900"
         >
           <svg
@@ -298,23 +294,23 @@ export default function ManageClasses() {
               d="M12 6v6m0 0v6m0-6h6m-6 0H6"
             />
           </svg>
-          Add New Class
+          Add New Course
         </Link>
-        <ComponentCard title="List of Classes">
+        <ComponentCard title="List of Courses">
           {/* Search Bar */}
-
           <div className="p-4 border-b border-gray-200 dark:border-white/[0.05]">
             <Input
               type="text"
-              placeholder="Search by name, project, role, or status..."
+              placeholder="Search by course code, name, or status..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setPage(0); // reset page on search
+                setPage(0);
               }}
               className="sm:w-1/3"
             />
           </div>
+
           {alert && (
             <div className="mb-4">
               <Alert
@@ -325,6 +321,7 @@ export default function ManageClasses() {
               />
             </div>
           )}
+
           {/* Table */}
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
@@ -336,19 +333,13 @@ export default function ManageClasses() {
                         isHeader
                         className="px-5 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider sm:px-6"
                       >
-                        Class Code
+                        Course Code
                       </TableCell>
                       <TableCell
                         isHeader
                         className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
                       >
-                        Class Name
-                      </TableCell>
-                      <TableCell
-                        isHeader
-                        className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
-                      >
-                        Grade
+                        Course Name
                       </TableCell>
                       <TableCell
                         isHeader
@@ -367,30 +358,27 @@ export default function ManageClasses() {
 
                   <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                     {paginatedData.length > 0 ? (
-                      paginatedData.map((order, index) => (
+                      paginatedData.map((course, index) => (
                         <TableRow
-                          key={page * rowsPerPage + index}
-                          onClick={() => handleTableRowClick(order)}
+                          key={course._id || index}
+                          onClick={() => handleTableRowClick(course)}
                           className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
                         >
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                            {order.classCode}
+                            {course.courseCode}
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                            {order.className}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                            {order.grade}
+                            {course.courseName}
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                             <span
                               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                order.status
+                                course.status
                                   ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                                   : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                               }`}
                             >
-                              {order.status ? "Active" : "Inactive"}
+                              {course.status ? "Active" : "Inactive"}
                             </span>
                           </TableCell>
 
@@ -402,10 +390,10 @@ export default function ManageClasses() {
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={(e) =>
-                                  handleActionClick(e, handleUpdate, order)
+                                  handleActionClick(e, handleUpdate, course)
                                 }
                                 className="flex items-center justify-center p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-                                title="Edit Class"
+                                title="Edit Course"
                               >
                                 <svg
                                   className="w-5 h-5"
@@ -423,10 +411,10 @@ export default function ManageClasses() {
                               </button>
                               <button
                                 onClick={(e) =>
-                                  handleActionClick(e, handleDelete, order)
+                                  handleActionClick(e, handleDelete, course)
                                 }
                                 className="flex items-center justify-center p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500"
-                                title="Delete Class"
+                                title="Delete Course"
                               >
                                 <svg
                                   className="w-5 h-5"
@@ -448,10 +436,10 @@ export default function ManageClasses() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={4}
                           className="py-6 text-center text-gray-500 dark:text-gray-400"
                         >
-                          No Records.
+                          No courses found.
                         </TableCell>
                       </TableRow>
                     )}
@@ -463,7 +451,6 @@ export default function ManageClasses() {
 
           {/* Pagination Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-3">
-            {/* Rows per page */}
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 text-sm">
               <span>Rows per page:</span>
               <select
@@ -482,7 +469,6 @@ export default function ManageClasses() {
               </select>
             </div>
 
-            {/* Pagination buttons */}
             <div className="flex items-center space-x-2">
               <button
                 disabled={page === 0}
@@ -504,6 +490,7 @@ export default function ManageClasses() {
             </div>
           </div>
         </ComponentCard>
+
         {/* Update Modal */}
         <Modal
           isOpen={isUpdateOpen}
@@ -513,50 +500,48 @@ export default function ManageClasses() {
           <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
             <div className="px-2 pr-14">
               <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-                Edit Class
+                Edit Course
               </h4>
               <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-                Update class details to keep your application up-to-date.
+                Update course details to keep your application up-to-date.
               </p>
             </div>
             <form className="flex flex-col">
               <div className="px-2 overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div>
-                    <Label>Class Code</Label>
+                    <Label htmlFor="courseCode">Course Code</Label>
                     <Input
                       type="text"
-                      name="classCode"
-                      value={formData.classCode}
+                      name="courseCode"
+                      value={formData.courseCode}
                       onChange={handleChange}
+                      placeholder="Enter course code"
                     />
                   </div>
                   <div>
-                    <Label>Class Name</Label>
+                    <Label htmlFor="courseName">Course Name</Label>
                     <Input
                       type="text"
-                      name="className"
-                      value={formData.className}
+                      name="courseName"
+                      value={formData.courseName}
                       onChange={handleChange}
+                      placeholder="Enter course name"
                     />
                   </div>
-                  <div>
-                    <Label>Grade</Label>
-                    <Input
-                      type="text"
-                      name="grade"
-                      value={formData.grade}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div>
-                    <Label>Status</Label>
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="status">Status</Label>
                     <Select
-                      options={options}
+                      options={statusOptions}
                       placeholder="Choose a status"
                       onChange={handleSelectChange}
-                      defaultValue={formData.status ? "true" : "false"} // preselect value
+                      defaultValue={formData.status ? "true" : "false"}
                     />
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {formData.status
+                        ? "This course will be active and available for student enrollment"
+                        : "This course will be inactive and not available for enrollment"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -568,8 +553,8 @@ export default function ManageClasses() {
                 >
                   Close
                 </Button>
-                <Button size="sm" onClick={handleSave}>
-                  Save Changes
+                <Button size="sm" onClick={handleSave} disabled={loading}>
+                  {loading ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </form>
@@ -585,45 +570,41 @@ export default function ManageClasses() {
           <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
             <div className="px-2 pr-14">
               <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-                Class Details
+                Course Details
               </h4>
               <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-                Here are the details of the class.
+                Here are the details of the course.
               </p>
             </div>
             <div className="px-2 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2 ">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                 <div>
-                  <Label>Class Code</Label>
+                  <Label>Course Code</Label>
                   <Input
                     type="text"
-                    value={selectedClass?.classCode || ""}
+                    value={selectedCourse?.courseCode || ""}
                     readOnly
                   />
                 </div>
                 <div>
-                  <Label>Class Name</Label>
+                  <Label>Course Name</Label>
                   <Input
                     type="text"
-                    value={selectedClass?.className || ""}
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <Label>Grade</Label>
-                  <Input
-                    type="text"
-                    value={selectedClass?.grade || ""}
+                    value={selectedCourse?.courseName || ""}
                     readOnly
                   />
                 </div>
                 <div>
                   <Label>Status</Label>
-                  <Input
-                    type="text"
-                    value={selectedClass?.status ? "Active" : "Inactive"}
-                    readOnly
-                  />
+                  <div
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
+                      selectedCourse?.status
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                    }`}
+                  >
+                    {selectedCourse?.status ? "Active" : "Inactive"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -644,8 +625,8 @@ export default function ManageClasses() {
           isOpen={confirmOpen}
           onClose={() => setConfirmOpen(false)}
           onConfirm={confirmDelete}
-          title="Delete Class"
-          message={`Are you sure you want to delete class ${classToDelete?.classCode}? This action cannot be undone.`}
+          title="Deactivate Course"
+          message={`Are you sure you want to deactivate course ${courseToDelete?.courseCode}? This action cannot be undone.`}
         />
       </div>
     </div>
