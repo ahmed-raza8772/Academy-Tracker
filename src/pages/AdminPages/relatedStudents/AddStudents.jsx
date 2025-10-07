@@ -143,7 +143,20 @@ export default function AddStudents() {
     notes: "",
     transportType: "walk",
     bus: "",
+
+    // External Login Credentials
+    externalLoginCredential: [],
   });
+
+  // External Login Credential state
+  const [externalLoginCredentials, setExternalLoginCredentials] = useState([
+    {
+      websiteName: "",
+      link: "",
+      emailOrUsername: "",
+      password: "",
+    },
+  ]);
 
   const fetchClasses = async () => {
     try {
@@ -372,6 +385,59 @@ export default function AddStudents() {
     }
   };
 
+  // Handle external login credential changes
+  const handleExternalLoginChange = (index, field, value) => {
+    const updatedCredentials = [...externalLoginCredentials];
+    updatedCredentials[index] = {
+      ...updatedCredentials[index],
+      [field]: value,
+    };
+    setExternalLoginCredentials(updatedCredentials);
+
+    // Update formData with cleaned credentials (remove empty ones)
+    const cleanedCredentials = updatedCredentials.filter(
+      (cred) => cred.websiteName.trim() !== ""
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      externalLoginCredential: cleanedCredentials,
+    }));
+  };
+
+  // Add new external login credential field
+  const addExternalLoginField = () => {
+    setExternalLoginCredentials((prev) => [
+      ...prev,
+      {
+        websiteName: "",
+        link: "",
+        emailOrUsername: "",
+        password: "",
+      },
+    ]);
+  };
+
+  // Remove external login credential field
+  const removeExternalLoginField = (index) => {
+    if (externalLoginCredentials.length > 1) {
+      const updatedCredentials = externalLoginCredentials.filter(
+        (_, i) => i !== index
+      );
+      setExternalLoginCredentials(updatedCredentials);
+
+      // Update formData
+      const cleanedCredentials = updatedCredentials.filter(
+        (cred) => cred.websiteName.trim() !== ""
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        externalLoginCredential: cleanedCredentials,
+      }));
+    }
+  };
+
   // Improved validation function
   const validateForm = () => {
     const newErrors = {};
@@ -508,6 +574,17 @@ export default function AddStudents() {
         notes: formData.notes?.trim() || undefined,
         transportType: formData.transportType,
         bus: formData.transportType === "bus" ? formData.bus : undefined,
+
+        // Include external login credentials
+        externalLoginCredential:
+          formData.externalLoginCredential.length > 0
+            ? formData.externalLoginCredential.map((cred) => ({
+                websiteName: cred.websiteName.trim(),
+                link: cred.link?.trim() || undefined,
+                emailOrUsername: cred.emailOrUsername?.trim() || undefined,
+                password: cred.password?.trim() || undefined,
+              }))
+            : undefined,
       };
 
       // Clean undefined values
@@ -577,7 +654,18 @@ export default function AddStudents() {
         notes: "",
         transportType: "walk",
         bus: "",
+        externalLoginCredential: [],
       });
+
+      // Reset external login credentials
+      setExternalLoginCredentials([
+        {
+          websiteName: "",
+          link: "",
+          emailOrUsername: "",
+          password: "",
+        },
+      ]);
 
       // Show success message
       setSuccessMessage(
@@ -1056,6 +1144,144 @@ export default function AddStudents() {
                     />
                   </div>
                 </div>
+              </div>
+            </section>
+
+            {/* External Login Credentials Section */}
+            <section className="p-4 bg-gray-50 rounded-xl dark:bg-gray-900/50 sm:p-6">
+              <div className="flex items-center mb-4 sm:mb-6">
+                <div className="flex items-center justify-center w-8 h-8 mr-3 bg-yellow-100 rounded-xl dark:bg-yellow-900/30 sm:w-10 sm:h-10 sm:mr-4">
+                  <svg
+                    className="w-4 h-4 text-yellow-600 dark:text-yellow-400 sm:w-5 sm:h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
+                    External Login Credentials
+                  </h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 sm:text-sm">
+                    Website login information (optional)
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {externalLoginCredentials.map((credential, index) => (
+                  <div
+                    key={index}
+                    className="p-4 border border-gray-200 rounded-lg dark:border-gray-600"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Credential #{index + 1}
+                      </h5>
+                      {externalLoginCredentials.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeExternalLoginField(index)}
+                          className="text-xs text-error-600 hover:text-error-700"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <Label htmlFor={`websiteName-${index}`}>
+                          Website Name
+                        </Label>
+                        <Input
+                          id={`websiteName-${index}`}
+                          type="text"
+                          value={credential.websiteName}
+                          onChange={(e) =>
+                            handleExternalLoginChange(
+                              index,
+                              "websiteName",
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g., Khan Academy, Quizlet"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Label htmlFor={`link-${index}`}>Website Link</Label>
+                        <Input
+                          id={`link-${index}`}
+                          type="url"
+                          value={credential.link}
+                          onChange={(e) =>
+                            handleExternalLoginChange(
+                              index,
+                              "link",
+                              e.target.value
+                            )
+                          }
+                          placeholder="https://example.com"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor={`emailOrUsername-${index}`}>
+                          Email or Username
+                        </Label>
+                        <Input
+                          id={`emailOrUsername-${index}`}
+                          type="text"
+                          value={credential.emailOrUsername}
+                          onChange={(e) =>
+                            handleExternalLoginChange(
+                              index,
+                              "emailOrUsername",
+                              e.target.value
+                            )
+                          }
+                          placeholder="username@example.com"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor={`password-${index}`}>Password</Label>
+                        <Input
+                          id={`password-${index}`}
+                          type="password"
+                          value={credential.password}
+                          onChange={(e) =>
+                            handleExternalLoginChange(
+                              index,
+                              "password",
+                              e.target.value
+                            )
+                          }
+                          placeholder="••••••••"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addExternalLoginField}
+                  className="w-full text-sm"
+                >
+                  + Add Another Credential
+                </Button>
               </div>
             </section>
 

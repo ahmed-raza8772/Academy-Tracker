@@ -8,6 +8,7 @@ import { Link } from "react-router";
 import { useParams } from "react-router";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../../../hooks/useAuth";
+import ExternalLoginCredentials from "../../../components/StudentProfile/ExternalLoginCredentials";
 
 export default function ViewStudent() {
   const { id } = useParams();
@@ -725,6 +726,7 @@ export default function ViewStudent() {
         <div className="space-y-6">
           <UserMetaCard id={id} />
           <UserInfoCard id={id} />
+          <ExternalLoginCredentials studentId={id} />
           <UserAddressCard id={id} />
         </div>
       </div>

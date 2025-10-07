@@ -13,6 +13,15 @@ export default function AddUsers() {
     username: "",
     password: "",
     role: "",
+    teacherType: "",
+    driverName: "",
+    driverAge: "",
+    driverArcNumber: "",
+    driverLicenceNumber: "",
+    helperName: "",
+    helperNumber: "",
+    helperAge: "",
+    helperArcNumber: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -26,6 +35,14 @@ export default function AddUsers() {
     { value: "student", label: "Student" },
     { value: "parent", label: "Parent" },
     { value: "teacher", label: "Teacher" },
+    { value: "driver", label: "Driver" },
+    { value: "helper", label: "Helper" },
+  ];
+
+  const teacherTypes = [
+    { value: "Home", label: "Home Teacher" },
+    { value: "Native", label: "Native Teacher" },
+    { value: "PartTime", label: "Part Time Teacher" },
   ];
 
   // Pre-fill form from URL parameters when component mounts
@@ -89,6 +106,69 @@ export default function AddUsers() {
           delete errors.role;
         }
         break;
+      case "teacherType":
+        if (formData.role === "teacher" && !value) {
+          errors.teacherType = "Teacher type is required";
+        } else {
+          delete errors.teacherType;
+        }
+        break;
+      case "driverName":
+        if (formData.role === "driver" && !value.trim()) {
+          errors.driverName = "Driver name is required";
+        } else {
+          delete errors.driverName;
+        }
+        break;
+      case "driverAge":
+        if (formData.role === "driver" && !value.trim()) {
+          errors.driverAge = "Driver age is required";
+        } else {
+          delete errors.driverAge;
+        }
+        break;
+      case "driverArcNumber":
+        if (formData.role === "driver" && !value.trim()) {
+          errors.driverArcNumber = "Driver ARC number is required";
+        } else {
+          delete errors.driverArcNumber;
+        }
+        break;
+      case "driverLicenceNumber":
+        if (formData.role === "driver" && !value.trim()) {
+          errors.driverLicenceNumber = "Driver licence number is required";
+        } else {
+          delete errors.driverLicenceNumber;
+        }
+        break;
+      case "helperName":
+        if (formData.role === "helper" && !value.trim()) {
+          errors.helperName = "Helper name is required";
+        } else {
+          delete errors.helperName;
+        }
+        break;
+      case "helperNumber":
+        if (formData.role === "helper" && !value.trim()) {
+          errors.helperNumber = "Helper number is required";
+        } else {
+          delete errors.helperNumber;
+        }
+        break;
+      case "helperAge":
+        if (formData.role === "helper" && !value.trim()) {
+          errors.helperAge = "Helper age is required";
+        } else {
+          delete errors.helperAge;
+        }
+        break;
+      case "helperArcNumber":
+        if (formData.role === "helper" && !value.trim()) {
+          errors.helperArcNumber = "Helper ARC number is required";
+        } else {
+          delete errors.helperArcNumber;
+        }
+        break;
       default:
         break;
     }
@@ -109,6 +189,25 @@ export default function AddUsers() {
       // Automatically set username to match email when email changes
       if (name === "email") {
         updatedFormData.username = value;
+      }
+
+      // Reset role-specific fields when role changes
+      if (name === "role") {
+        if (value !== "teacher") {
+          updatedFormData.teacherType = "";
+        }
+        if (value !== "driver") {
+          updatedFormData.driverName = "";
+          updatedFormData.driverAge = "";
+          updatedFormData.driverArcNumber = "";
+          updatedFormData.driverLicenceNumber = "";
+        }
+        if (value !== "helper") {
+          updatedFormData.helperName = "";
+          updatedFormData.helperNumber = "";
+          updatedFormData.helperAge = "";
+          updatedFormData.helperArcNumber = "";
+        }
       }
 
       return updatedFormData;
@@ -150,8 +249,46 @@ export default function AddUsers() {
 
     if (!formData.role) errors.role = "Role is required";
 
+    // Teacher-specific validation
+    if (formData.role === "teacher" && !formData.teacherType) {
+      errors.teacherType = "Teacher type is required";
+    }
+
+    // Driver-specific validation
+    if (formData.role === "driver") {
+      if (!formData.driverName.trim())
+        errors.driverName = "Driver name is required";
+      if (!formData.driverAge.trim())
+        errors.driverAge = "Driver age is required";
+      if (!formData.driverArcNumber.trim())
+        errors.driverArcNumber = "Driver ARC number is required";
+      if (!formData.driverLicenceNumber.trim())
+        errors.driverLicenceNumber = "Driver licence number is required";
+    }
+
+    // Helper-specific validation
+    if (formData.role === "helper") {
+      if (!formData.helperName.trim())
+        errors.helperName = "Helper name is required";
+      if (!formData.helperNumber.trim())
+        errors.helperNumber = "Helper number is required";
+      if (!formData.helperAge.trim())
+        errors.helperAge = "Helper age is required";
+      if (!formData.helperArcNumber.trim())
+        errors.helperArcNumber = "Helper ARC number is required";
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const generateDummyData = () => {
+    const randomId = Math.random().toString(36).substring(2, 8);
+    return {
+      username: `user_${randomId}`,
+      email: `user_${randomId}@example.com`,
+      password: `password${randomId}`,
+    };
   };
 
   const handleSubmit = async (e) => {
@@ -165,13 +302,39 @@ export default function AddUsers() {
     }
 
     try {
-      // Prepare data for API - include username
+      // Generate dummy data for required fields
+      const dummyData = generateDummyData();
+
+      // Prepare data for API - for driver and helper, use dummy login credentials
       const userData = {
         fullname: formData.fullname.trim(),
-        email: formData.email.trim(),
-        username: formData.username.trim(), // Send username to backend
-        password: formData.password,
+        email: formData.email.trim() || dummyData.email,
+        username: formData.username.trim() || dummyData.username,
+        password: formData.password || dummyData.password,
         role: formData.role,
+        ...(formData.role === "teacher" && {
+          teacherType: formData.teacherType,
+        }),
+        ...(formData.role === "driver" && {
+          driverName: formData.driverName,
+          driverAge: formData.driverAge,
+          driverArcNumber: formData.driverArcNumber,
+          driverLicenceNumber: formData.driverLicenceNumber,
+          // For driver, use dummy login credentials since they don't need login access
+          email: dummyData.email,
+          username: dummyData.username,
+          password: dummyData.password,
+        }),
+        ...(formData.role === "helper" && {
+          helperName: formData.helperName,
+          helperNumber: formData.helperNumber,
+          helperAge: formData.helperAge,
+          helperArcNumber: formData.helperArcNumber,
+          // For helper, use dummy login credentials since they don't need login access
+          email: dummyData.email,
+          username: dummyData.username,
+          password: dummyData.password,
+        }),
       };
 
       console.log("Sending user data:", userData);
@@ -198,6 +361,15 @@ export default function AddUsers() {
         username: "",
         password: "",
         role: "",
+        teacherType: "",
+        driverName: "",
+        driverAge: "",
+        driverArcNumber: "",
+        driverLicenceNumber: "",
+        helperName: "",
+        helperNumber: "",
+        helperAge: "",
+        helperArcNumber: "",
       });
       setFieldErrors({});
       setIsPrefilled(false);
@@ -209,6 +381,283 @@ export default function AddUsers() {
   };
 
   const hasError = Object.keys(fieldErrors).length > 0;
+
+  // Render role-specific fields
+  const renderRoleSpecificFields = () => {
+    switch (formData.role) {
+      case "teacher":
+        return (
+          <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+            <h4 className="font-medium text-gray-700 dark:text-gray-300">
+              Teacher Information
+            </h4>
+
+            {/* Teacher Type */}
+            <div>
+              <label
+                htmlFor="teacherType"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Teacher Type *
+              </label>
+              <select
+                id="teacherType"
+                name="teacherType"
+                value={formData.teacherType}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={loading}
+                className={`h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-none focus:ring dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 ${
+                  loading
+                    ? "text-gray-500 border-gray-300 opacity-40 bg-gray-100 cursor-not-allowed dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 opacity-40"
+                    : fieldErrors.teacherType
+                      ? "border-error-500 focus:border-error-300 focus:ring-error-500/20 dark:text-error-400 dark:border-error-500 dark:focus:border-error-800"
+                      : formData.teacherType && !fieldErrors.teacherType
+                        ? "border-success-500 focus:border-success-300 focus:ring-success-500/20 dark:text-success-400 dark:border-success-500 dark:focus:border-success-800"
+                        : "bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-800"
+                }`}
+              >
+                <option value="">Select teacher type</option>
+                {teacherTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              {fieldErrors.teacherType && (
+                <p className="mt-1.5 text-xs text-error-500">
+                  {fieldErrors.teacherType}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+
+      case "driver":
+        return (
+          <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+            <h4 className="font-medium text-gray-700 dark:text-gray-300">
+              Driver Information
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Driver Name */}
+              <div>
+                <label
+                  htmlFor="driverName"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Driver Name *
+                </label>
+                <Input
+                  type="text"
+                  id="driverName"
+                  name="driverName"
+                  placeholder="Enter driver name"
+                  value={formData.driverName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.driverName}
+                  success={formData.driverName && !fieldErrors.driverName}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Driver Age */}
+              <div>
+                <label
+                  htmlFor="driverAge"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Driver Age *
+                </label>
+                <Input
+                  type="text"
+                  id="driverAge"
+                  name="driverAge"
+                  placeholder="Enter driver age"
+                  value={formData.driverAge}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.driverAge}
+                  success={formData.driverAge && !fieldErrors.driverAge}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Driver ARC Number */}
+              <div>
+                <label
+                  htmlFor="driverArcNumber"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Driver ARC Number *
+                </label>
+                <Input
+                  type="text"
+                  id="driverArcNumber"
+                  name="driverArcNumber"
+                  placeholder="Enter driver ARC number"
+                  value={formData.driverArcNumber}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.driverArcNumber}
+                  success={
+                    formData.driverArcNumber && !fieldErrors.driverArcNumber
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Driver Licence Number */}
+              <div>
+                <label
+                  htmlFor="driverLicenceNumber"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Driver Licence Number *
+                </label>
+                <Input
+                  type="text"
+                  id="driverLicenceNumber"
+                  name="driverLicenceNumber"
+                  placeholder="Enter driver licence number"
+                  value={formData.driverLicenceNumber}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.driverLicenceNumber}
+                  success={
+                    formData.driverLicenceNumber &&
+                    !fieldErrors.driverLicenceNumber
+                  }
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* Note for driver */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Note: Driver will be created with dummy login credentials since
+                they don't require login access.
+              </p>
+            </div>
+          </div>
+        );
+
+      case "helper":
+        return (
+          <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+            <h4 className="font-medium text-gray-700 dark:text-gray-300">
+              Helper Information
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Helper Name */}
+              <div>
+                <label
+                  htmlFor="helperName"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Helper Name *
+                </label>
+                <Input
+                  type="text"
+                  id="helperName"
+                  name="helperName"
+                  placeholder="Enter helper name"
+                  value={formData.helperName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.helperName}
+                  success={formData.helperName && !fieldErrors.helperName}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Helper Number */}
+              <div>
+                <label
+                  htmlFor="helperNumber"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Helper Number *
+                </label>
+                <Input
+                  type="text"
+                  id="helperNumber"
+                  name="helperNumber"
+                  placeholder="Enter helper number"
+                  value={formData.helperNumber}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.helperNumber}
+                  success={formData.helperNumber && !fieldErrors.helperNumber}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Helper Age */}
+              <div>
+                <label
+                  htmlFor="helperAge"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Helper Age *
+                </label>
+                <Input
+                  type="text"
+                  id="helperAge"
+                  name="helperAge"
+                  placeholder="Enter helper age"
+                  value={formData.helperAge}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.helperAge}
+                  success={formData.helperAge && !fieldErrors.helperAge}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Helper ARC Number */}
+              <div>
+                <label
+                  htmlFor="helperArcNumber"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Helper ARC Number *
+                </label>
+                <Input
+                  type="text"
+                  id="helperArcNumber"
+                  name="helperArcNumber"
+                  placeholder="Enter helper ARC number"
+                  value={formData.helperArcNumber}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.helperArcNumber}
+                  success={
+                    formData.helperArcNumber && !fieldErrors.helperArcNumber
+                  }
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* Note for helper */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Note: Helper will be created with dummy login credentials since
+                they don't require login access.
+              </p>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div>
@@ -293,92 +742,98 @@ export default function AddUsers() {
               )}
             </div>
 
-            {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Email Address *
-              </label>
-              <Input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="Enter email address"
-                value={formData.email}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={fieldErrors.email}
-                success={formData.email && !fieldErrors.email}
-                disabled={loading}
-              />
-              {fieldErrors.email && (
-                <p className="mt-1.5 text-xs text-error-500">
-                  {fieldErrors.email}
-                </p>
-              )}
-            </div>
+            {/* Email - Hide for driver and helper since they use dummy data */}
+            {formData.role !== "driver" && formData.role !== "helper" && (
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Email Address *
+                </label>
+                <Input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="Enter email address"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.email}
+                  success={formData.email && !fieldErrors.email}
+                  disabled={loading}
+                />
+                {fieldErrors.email && (
+                  <p className="mt-1.5 text-xs text-error-500">
+                    {fieldErrors.email}
+                  </p>
+                )}
+              </div>
+            )}
 
-            {/* Username - Auto-filled from email */}
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Username *
-              </label>
-              <Input
-                type="text"
-                id="username"
-                name="username"
-                placeholder="Username will auto-fill from email"
-                value={formData.username}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={fieldErrors.username}
-                success={formData.username && !fieldErrors.username}
-                disabled={loading}
-                readOnly={true} // Make it read-only since it auto-fills from email
-                className="bg-gray-50 cursor-not-allowed dark:bg-gray-800/50" // Additional styling for read-only state
-              />
-              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                Username is automatically set to match the email address
-              </p>
-              {fieldErrors.username && (
-                <p className="mt-1.5 text-xs text-error-500">
-                  {fieldErrors.username}
+            {/* Username - Hide for driver and helper since they use dummy data */}
+            {formData.role !== "driver" && formData.role !== "helper" && (
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Username *
+                </label>
+                <Input
+                  type="text"
+                  id="username"
+                  name="username"
+                  placeholder="Username will auto-fill from email"
+                  value={formData.username}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.username}
+                  success={formData.username && !fieldErrors.username}
+                  disabled={loading}
+                  readOnly={true}
+                  className="bg-gray-50 cursor-not-allowed dark:bg-gray-800/50"
+                />
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  Username is automatically set to match the email address
                 </p>
-              )}
-            </div>
+                {fieldErrors.username && (
+                  <p className="mt-1.5 text-xs text-error-500">
+                    {fieldErrors.username}
+                  </p>
+                )}
+              </div>
+            )}
 
-            {/* Password */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Password *
-              </label>
-              <Input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="Enter password"
-                value={formData.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={fieldErrors.password}
-                success={formData.password && !fieldErrors.password}
-                disabled={loading}
-                hint="Password must be at least 6 characters long"
-              />
-              {fieldErrors.password && (
-                <p className="mt-1.5 text-xs text-error-500">
-                  {fieldErrors.password}
-                </p>
-              )}
-            </div>
+            {/* Password - Hide for driver and helper since they use dummy data */}
+            {formData.role !== "driver" && formData.role !== "helper" && (
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Password *
+                </label>
+                <Input
+                  type="password"
+                  id="password"
+                  name="password"
+                  placeholder="Enter password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={fieldErrors.password}
+                  success={formData.password && !fieldErrors.password}
+                  disabled={loading}
+                  hint="Password must be at least 6 characters long"
+                />
+                {fieldErrors.password && (
+                  <p className="mt-1.5 text-xs text-error-500">
+                    {fieldErrors.password}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Role */}
             <div>
@@ -418,6 +873,9 @@ export default function AddUsers() {
                 </p>
               )}
             </div>
+
+            {/* Role-specific Fields */}
+            {formData.role && renderRoleSpecificFields()}
 
             {/* Submit Button */}
             <div className="pt-4">
@@ -464,10 +922,33 @@ export default function AddUsers() {
             </h4>
             <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
               <li>• Full Name - User's complete name</li>
-              <li>• Email - Valid email address</li>
-              <li>• Username - Automatically matches email</li>
-              <li>• Password - Minimum 6 characters</li>
+              {formData.role !== "driver" && formData.role !== "helper" && (
+                <>
+                  <li>• Email - Valid email address</li>
+                  <li>• Username - Automatically matches email</li>
+                  <li>• Password - Minimum 6 characters</li>
+                </>
+              )}
               <li>• Role - User's role in the system</li>
+              {formData.role === "teacher" && (
+                <li>• Teacher Type - Required for teacher roles</li>
+              )}
+              {formData.role === "driver" && (
+                <>
+                  <li>• Driver Name - Full name of the driver</li>
+                  <li>• Driver Age - Age of the driver</li>
+                  <li>• Driver ARC Number - ARC identification number</li>
+                  <li>• Driver Licence Number - Driving licence number</li>
+                </>
+              )}
+              {formData.role === "helper" && (
+                <>
+                  <li>• Helper Name - Full name of the helper</li>
+                  <li>• Helper Number - Contact number</li>
+                  <li>• Helper Age - Age of the helper</li>
+                  <li>• Helper ARC Number - ARC identification number</li>
+                </>
+              )}
             </ul>
           </div>
         </div>

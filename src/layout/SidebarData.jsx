@@ -67,6 +67,11 @@ export const AdminSidebarData = [
         icon: <FaIcons.FaTasks />,
       },
       {
+        name: "Schedule Courses",
+        path: "/Admin/Courses/Schedule",
+        icon: <AiIcons.AiOutlineCalendar />,
+      },
+      {
         name: "Classes",
         path: "/Admin/Classes/Manage",
         icon: <FaIcons.FaObjectGroup />,
