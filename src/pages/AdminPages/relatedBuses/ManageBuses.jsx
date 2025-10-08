@@ -42,6 +42,14 @@ export default function ManageBuses() {
     busName: "",
     busNumber: "",
     status: true,
+    driverName: "",
+    driverAge: "",
+    driverArcNumber: "",
+    driverLicenceNumber: "",
+    helperName: "",
+    helperNumber: "",
+    helperAge: "",
+    helperArcNumber: "",
   });
 
   const statusOptions = [
@@ -90,6 +98,14 @@ export default function ManageBuses() {
       busName: bus.busName || "",
       busNumber: bus.busNumber || "",
       status: bus.status !== undefined ? bus.status : true,
+      driverName: bus.driverName || "",
+      driverAge: bus.driverAge || "",
+      driverArcNumber: bus.driverArcNumber || "",
+      driverLicenceNumber: bus.driverLicenceNumber || "",
+      helperName: bus.helperName || "",
+      helperNumber: bus.helperNumber || "",
+      helperAge: bus.helperAge || "",
+      helperArcNumber: bus.helperArcNumber || "",
     });
     setIsUpdateOpen(true);
   };
@@ -114,6 +130,14 @@ export default function ManageBuses() {
           busName: busToDelete.busName,
           busNumber: busToDelete.busNumber,
           status: false, // Soft delete
+          driverName: busToDelete.driverName,
+          driverAge: busToDelete.driverAge,
+          driverArcNumber: busToDelete.driverArcNumber,
+          driverLicenceNumber: busToDelete.driverLicenceNumber,
+          helperName: busToDelete.helperName,
+          helperNumber: busToDelete.helperNumber,
+          helperAge: busToDelete.helperAge,
+          helperArcNumber: busToDelete.helperArcNumber,
         }),
       });
 
@@ -172,6 +196,14 @@ export default function ManageBuses() {
         busName: formData.busName.trim(),
         busNumber: formData.busNumber.trim(),
         status: formData.status, // boolean true/false
+        driverName: formData.driverName.trim(),
+        driverAge: formData.driverAge.trim(),
+        driverArcNumber: formData.driverArcNumber.trim(),
+        driverLicenceNumber: formData.driverLicenceNumber.trim(),
+        helperName: formData.helperName.trim(),
+        helperNumber: formData.helperNumber.trim(),
+        helperAge: formData.helperAge.trim(),
+        helperArcNumber: formData.helperArcNumber.trim(),
       };
 
       const response = await fetch(`${API_URL}/api/v1/bus/${selectedBus._id}`, {
@@ -225,7 +257,7 @@ export default function ManageBuses() {
     action(bus);
   };
 
-  // 🔍 Search - simplified for buses
+  // 🔍 Search - enhanced for buses with driver/helper fields
   const filteredData = useMemo(() => {
     if (!searchTerm.trim()) return buses;
 
@@ -234,6 +266,10 @@ export default function ManageBuses() {
       return (
         bus.busName?.toLowerCase().includes(term) ||
         bus.busNumber?.toLowerCase().includes(term) ||
+        bus.driverName?.toLowerCase().includes(term) ||
+        bus.helperName?.toLowerCase().includes(term) ||
+        bus.driverArcNumber?.toLowerCase().includes(term) ||
+        bus.helperArcNumber?.toLowerCase().includes(term) ||
         (bus.status ? "active" : "inactive").includes(term)
       );
     });
@@ -293,7 +329,7 @@ export default function ManageBuses() {
           <div className="p-4 border-b border-gray-200 dark:border-white/[0.05]">
             <Input
               type="text"
-              placeholder="Search by bus name, number, or status..."
+              placeholder="Search by bus name, number, driver, helper, or status..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -337,6 +373,18 @@ export default function ManageBuses() {
                         isHeader
                         className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
                       >
+                        Driver
+                      </TableCell>
+                      <TableCell
+                        isHeader
+                        className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
+                      >
+                        Helper
+                      </TableCell>
+                      <TableCell
+                        isHeader
+                        className="px-4 py-3 font-semibold text-gray-700 text-start text-theme-xs dark:text-gray-200 uppercase tracking-wider"
+                      >
                         Status
                       </TableCell>
                       <TableCell
@@ -361,6 +409,12 @@ export default function ManageBuses() {
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                             {bus.busNumber}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                            {bus.driverName || "N/A"}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                            {bus.helperName || "N/A"}
                           </TableCell>
                           <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                             <span
@@ -428,7 +482,7 @@ export default function ManageBuses() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={6}
                           className="py-6 text-center text-gray-500 dark:text-gray-400"
                         >
                           No buses found.
@@ -487,70 +541,242 @@ export default function ManageBuses() {
         <Modal
           isOpen={isUpdateOpen}
           onClose={() => setIsUpdateOpen(false)}
-          className="max-w-[700px] m-4"
+          className="max-w-4xl"
         >
-          <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
-            <div className="px-2 pr-14">
-              <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-                Edit Bus
-              </h4>
-              <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-                Update bus details to keep your transportation system
-                up-to-date.
-              </p>
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+                  Edit Bus Details
+                </h3>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  Update bus information and personnel details
+                </p>
+              </div>
+              <button
+                onClick={() => setIsUpdateOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
-            <form className="flex flex-col">
-              <div className="px-2 overflow-y-auto custom-scrollbar">
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label htmlFor="busName">Bus Name</Label>
-                    <Input
-                      type="text"
-                      name="busName"
-                      value={formData.busName}
-                      onChange={handleChange}
-                      placeholder="Enter bus name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="busNumber">Bus Number</Label>
-                    <Input
-                      type="text"
-                      name="busNumber"
-                      value={formData.busNumber}
-                      onChange={handleChange}
-                      placeholder="Enter bus number"
-                    />
-                  </div>
-                  <div className="lg:col-span-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select
-                      options={statusOptions}
-                      placeholder="Choose a status"
-                      onChange={handleSelectChange}
-                      defaultValue={formData.status ? "true" : "false"}
-                    />
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {formData.status
-                        ? "This bus will be active and available for student transportation"
-                        : "This bus will be inactive and not available for transportation"}
-                    </p>
+
+            {/* Modal Body */}
+            <div className="max-h-[60vh] overflow-y-auto p-6">
+              <form className="space-y-6">
+                {/* Basic Bus Information */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
+                    Basic Bus Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="busName" className="mb-2">
+                        Bus Name
+                      </Label>
+                      <Input
+                        type="text"
+                        name="busName"
+                        value={formData.busName}
+                        onChange={handleChange}
+                        placeholder="Enter bus name"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="busNumber" className="mb-2">
+                        Bus Number
+                      </Label>
+                      <Input
+                        type="text"
+                        name="busNumber"
+                        value={formData.busNumber}
+                        onChange={handleChange}
+                        placeholder="Enter bus number"
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="status" className="mb-2">
+                        Status
+                      </Label>
+                      <Select
+                        options={statusOptions}
+                        placeholder="Choose a status"
+                        onChange={handleSelectChange}
+                        defaultValue={formData.status ? "true" : "false"}
+                        className="w-full"
+                      />
+                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        {formData.status
+                          ? "This bus will be active and available for student transportation"
+                          : "This bus will be inactive and not available for transportation"}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsUpdateOpen(false)}
-                >
-                  Close
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={loading}>
-                  {loading ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
+
+                {/* Driver Information */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
+                    Driver Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="driverName" className="mb-2">
+                        Driver Name
+                      </Label>
+                      <Input
+                        type="text"
+                        name="driverName"
+                        value={formData.driverName}
+                        onChange={handleChange}
+                        placeholder="Enter driver name"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="driverAge" className="mb-2">
+                        Driver Age
+                      </Label>
+                      <Input
+                        type="text"
+                        name="driverAge"
+                        value={formData.driverAge}
+                        onChange={handleChange}
+                        placeholder="Enter driver age"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="driverArcNumber" className="mb-2">
+                        Driver ARC Number
+                      </Label>
+                      <Input
+                        type="text"
+                        name="driverArcNumber"
+                        value={formData.driverArcNumber}
+                        onChange={handleChange}
+                        placeholder="Enter ARC number"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="driverLicenceNumber" className="mb-2">
+                        Driver Licence Number
+                      </Label>
+                      <Input
+                        type="text"
+                        name="driverLicenceNumber"
+                        value={formData.driverLicenceNumber}
+                        onChange={handleChange}
+                        placeholder="Enter licence number"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Helper Information */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
+                    Helper Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="helperName" className="mb-2">
+                        Helper Name
+                      </Label>
+                      <Input
+                        type="text"
+                        name="helperName"
+                        value={formData.helperName}
+                        onChange={handleChange}
+                        placeholder="Enter helper name"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="helperNumber" className="mb-2">
+                        Helper Number
+                      </Label>
+                      <Input
+                        type="text"
+                        name="helperNumber"
+                        value={formData.helperNumber}
+                        onChange={handleChange}
+                        placeholder="Enter contact number"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="helperAge" className="mb-2">
+                        Helper Age
+                      </Label>
+                      <Input
+                        type="text"
+                        name="helperAge"
+                        value={formData.helperAge}
+                        onChange={handleChange}
+                        placeholder="Enter helper age"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="helperArcNumber" className="mb-2">
+                        Helper ARC Number
+                      </Label>
+                      <Input
+                        type="text"
+                        name="helperArcNumber"
+                        value={formData.helperArcNumber}
+                        onChange={handleChange}
+                        placeholder="Enter ARC number"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                variant="outline"
+                onClick={() => setIsUpdateOpen(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={loading}
+                className="min-w-[120px]"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </div>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
           </div>
         </Modal>
 
@@ -558,55 +784,138 @@ export default function ManageBuses() {
         <Modal
           isOpen={isViewOpen}
           onClose={() => setIsViewOpen(false)}
-          className="max-w-[700px] m-4"
+          className="max-w-4xl"
         >
-          <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
-            <div className="px-2 pr-14">
-              <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-                Bus Details
-              </h4>
-              <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-                Here are the details of the bus.
-              </p>
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+                  Bus Details
+                </h3>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  Complete information about the selected bus
+                </p>
+              </div>
+              <button
+                onClick={() => setIsViewOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
-            <div className="px-2 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                <div>
-                  <Label>Bus Name</Label>
-                  <Input
-                    type="text"
-                    value={selectedBus?.busName || ""}
-                    readOnly
-                  />
+
+            {/* Modal Body */}
+            <div className="max-h-[60vh] overflow-y-auto p-6">
+              <div className="space-y-6">
+                {/* Basic Bus Information */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
+                    Basic Bus Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="mb-2">Bus Name</Label>
+                      <div className="p-3 bg-white dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-500 text-gray-900 dark:text-white">
+                        {selectedBus?.busName || "N/A"}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="mb-2">Bus Number</Label>
+                      <div className="p-3 bg-white dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-500 text-gray-900 dark:text-white">
+                        {selectedBus?.busNumber || "N/A"}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="mb-2">Status</Label>
+                      <div className="p-3">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            selectedBus?.status
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          }`}
+                        >
+                          {selectedBus?.status ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label>Bus Number</Label>
-                  <Input
-                    type="text"
-                    value={selectedBus?.busNumber || ""}
-                    readOnly
-                  />
+
+                {/* Driver Information */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
+                    Driver Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { label: "Driver Name", value: selectedBus?.driverName },
+                      { label: "Driver Age", value: selectedBus?.driverAge },
+                      {
+                        label: "Driver ARC Number",
+                        value: selectedBus?.driverArcNumber,
+                      },
+                      {
+                        label: "Driver Licence Number",
+                        value: selectedBus?.driverLicenceNumber,
+                      },
+                    ].map((field, index) => (
+                      <div key={index}>
+                        <Label className="mb-2">{field.label}</Label>
+                        <div className="p-3 bg-white dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-500 text-gray-900 dark:text-white">
+                          {field.value || "N/A"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <Label>Status</Label>
-                  <div
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
-                      selectedBus?.status
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                    }`}
-                  >
-                    {selectedBus?.status ? "Active" : "Inactive"}
+
+                {/* Helper Information */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
+                    Helper Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { label: "Helper Name", value: selectedBus?.helperName },
+                      {
+                        label: "Helper Number",
+                        value: selectedBus?.helperNumber,
+                      },
+                      { label: "Helper Age", value: selectedBus?.helperAge },
+                      {
+                        label: "Helper ARC Number",
+                        value: selectedBus?.helperArcNumber,
+                      },
+                    ].map((field, index) => (
+                      <div key={index}>
+                        <Label className="mb-2">{field.label}</Label>
+                        <div className="p-3 bg-white dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-500 text-gray-900 dark:text-white">
+                          {field.value || "N/A"}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsViewOpen(false)}
-              >
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <Button variant="outline" onClick={() => setIsViewOpen(false)}>
                 Close
               </Button>
             </div>
@@ -619,7 +928,10 @@ export default function ManageBuses() {
           onClose={() => setConfirmOpen(false)}
           onConfirm={confirmDelete}
           title="Deactivate Bus"
-          message={`Are you sure you want to deactivate bus ${busToDelete?.busName} (${busToDelete?.busNumber})? This action cannot be undone.`}
+          message={`Are you sure you want to deactivate bus "${busToDelete?.busName}" (${busToDelete?.busNumber})? This action will make the bus unavailable for transportation.`}
+          confirmText="Deactivate"
+          cancelText="Cancel"
+          variant="danger"
         />
       </div>
     </div>

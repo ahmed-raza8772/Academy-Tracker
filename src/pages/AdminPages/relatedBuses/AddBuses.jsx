@@ -8,6 +8,7 @@ import { ChevronLeftIcon } from "../../../icons";
 import Alert from "../../../components/ui/alert/Alert";
 import Loader from "../../../components/common/Loader";
 import Label from "../../../components/form/Label";
+import { FaBus, FaCheck, FaUser, FaUsers } from "react-icons/fa";
 import { Link } from "react-router";
 
 export default function AddBuses() {
@@ -18,6 +19,14 @@ export default function AddBuses() {
     busName: "",
     busNumber: "",
     status: true, // Default to active
+    driverName: "",
+    driverAge: "",
+    driverArcNumber: "",
+    driverLicenceNumber: "",
+    helperName: "",
+    helperNumber: "",
+    helperAge: "",
+    helperArcNumber: "",
   });
 
   // ✅ state for showing alert
@@ -37,28 +46,60 @@ export default function AddBuses() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    if (!formData.busName.trim() || !formData.busNumber.trim()) {
+  const validateForm = () => {
+    const requiredFields = [
+      "busName",
+      "busNumber",
+      "driverName",
+      "driverAge",
+      "driverArcNumber",
+      "driverLicenceNumber",
+      "helperName",
+      "helperNumber",
+      "helperAge",
+      "helperArcNumber",
+    ];
+
+    const emptyFields = requiredFields.filter(
+      (field) => !formData[field]?.trim()
+    );
+
+    if (emptyFields.length > 0) {
       setAlert({
         variant: "error",
         title: "Error",
-        message: "All the fields are required.",
+        message: "All fields are required. Please fill in all the information.",
       });
-
-      // ⏳ Auto-hide after 3 seconds
       setTimeout(() => setAlert(null), 2500);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
-    e.preventDefault();
 
     try {
       // Prepare data for API - status is already boolean
       const apiData = {
         busName: formData.busName.trim(),
         busNumber: formData.busNumber.trim(),
-        status: formData.status, // This will be true or false
+        status: formData.status,
+        driverName: formData.driverName.trim(),
+        driverAge: formData.driverAge.trim(),
+        driverArcNumber: formData.driverArcNumber.trim(),
+        driverLicenceNumber: formData.driverLicenceNumber.trim(),
+        helperName: formData.helperName.trim(),
+        helperNumber: formData.helperNumber.trim(),
+        helperAge: formData.helperAge.trim(),
+        helperArcNumber: formData.helperArcNumber.trim(),
       };
 
       console.log("Sending data to backend:", apiData);
@@ -93,6 +134,14 @@ export default function AddBuses() {
         busName: "",
         busNumber: "",
         status: true,
+        driverName: "",
+        driverAge: "",
+        driverArcNumber: "",
+        driverLicenceNumber: "",
+        helperName: "",
+        helperNumber: "",
+        helperAge: "",
+        helperArcNumber: "",
       });
     } catch (error) {
       console.error("Error creating bus:", error);
@@ -119,23 +168,26 @@ export default function AddBuses() {
       />
       <PageBreadcrumb pageTitle="Add Bus" />
 
-      <div className="min-h-screen rounded-2xl border border-gray-200 bg-white px-5 py-7 dark:border-gray-800 dark:bg-white/[0.03] xl:px-10 xl:py-12">
-        {/* Clean Back Link - No borders, no extra styling */}
-        <div className="mb-6">
+      <div className="min-h-screen rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] xl:p-8">
+        {/* Clean Back Link */}
+        <div className="mb-8">
           <Link
             to="/Admin/Buses/Manage"
-            className="inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 transition-all hover:text-gray-900 hover:gap-3 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            <ChevronLeftIcon className="w-4 h-4" />
+            <ChevronLeftIcon className="w-4 h-4 transition-transform" />
             Back to Buses
           </Link>
         </div>
 
-        <div className="mx-auto w-full max-w-[630px]">
-          <ComponentCard title="Bus Details">
-            {/* ✅ render alert when state exists */}
+        <div className="mx-auto w-full max-w-2xl">
+          <ComponentCard
+            title="Add New Bus"
+            className="shadow-sm border-0 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50"
+          >
+            {/* Alert Section */}
             {alert && (
-              <div className="mb-4">
+              <div className="mb-6 animate-fade-in">
                 <Alert
                   variant={alert.variant}
                   title={alert.title}
@@ -145,71 +197,234 @@ export default function AddBuses() {
               </div>
             )}
 
-            <form className="space-y-5">
-              <div>
-                <Label htmlFor="busName" required>
-                  Bus Name
-                </Label>
-                <Input
-                  id="busName"
-                  name="busName"
-                  placeholder="Enter Bus Name (e.g., Morning Express, City Shuttle)"
-                  value={formData.busName}
-                  onChange={handleChange}
-                />
-                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  Give the bus a descriptive name for easy identification
-                </p>
+            <form className="space-y-6">
+              {/* Basic Bus Information */}
+              <div className="p-6 bg-white border border-gray-100 rounded-xl shadow-xs dark:bg-gray-800/50 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg dark:bg-blue-900/30">
+                    <FaBus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Basic Bus Information
+                  </h3>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <Label htmlFor="busName" required className="mb-2">
+                      Bus Name
+                    </Label>
+                    <Input
+                      id="busName"
+                      name="busName"
+                      placeholder="Enter Bus Name (e.g., Route-03, Morning Express)"
+                      value={formData.busName}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      Give the bus a descriptive name for easy identification
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="busNumber" required className="mb-2">
+                      Bus Number
+                    </Label>
+                    <Input
+                      id="busNumber"
+                      name="busNumber"
+                      placeholder="Enter Bus Number (e.g., 90238, B001)"
+                      value={formData.busNumber}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      Unique identifier for the bus in your fleet
+                    </p>
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div>
+                    <Label htmlFor="status" required className="mb-2">
+                      Status
+                    </Label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={formData.status.toString()}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-200 rounded-lg transition-all focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                    <p
+                      className={`mt-2 text-sm ${formData.status ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}
+                    >
+                      {formData.status
+                        ? "✓ This bus will be active and available for student transportation"
+                        : "⚠ This bus will be inactive and not available for transportation"}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="busNumber" required>
-                  Bus Number
-                </Label>
-                <Input
-                  id="busNumber"
-                  name="busNumber"
-                  placeholder="Enter Bus Number (e.g., B001, 101)"
-                  value={formData.busNumber}
-                  onChange={handleChange}
-                />
-                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  Unique identifier for the bus in your fleet
-                </p>
+              {/* Driver Information */}
+              <div className="p-6 bg-white border border-gray-100 rounded-xl shadow-xs dark:bg-gray-800/50 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg dark:bg-green-900/30">
+                    <FaUser className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Driver Information
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="driverName" required className="mb-2">
+                      Driver Name
+                    </Label>
+                    <Input
+                      id="driverName"
+                      name="driverName"
+                      placeholder="Enter driver's full name"
+                      value={formData.driverName}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="driverAge" required className="mb-2">
+                      Driver Age
+                    </Label>
+                    <Input
+                      id="driverAge"
+                      name="driverAge"
+                      placeholder="Enter driver's age"
+                      value={formData.driverAge}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="driverArcNumber" required className="mb-2">
+                      Driver ARC Number
+                    </Label>
+                    <Input
+                      id="driverArcNumber"
+                      name="driverArcNumber"
+                      placeholder="Enter ARC number"
+                      value={formData.driverArcNumber}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="driverLicenceNumber"
+                      required
+                      className="mb-2"
+                    >
+                      Driver Licence Number
+                    </Label>
+                    <Input
+                      id="driverLicenceNumber"
+                      name="driverLicenceNumber"
+                      placeholder="Enter licence number"
+                      value={formData.driverLicenceNumber}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Status Dropdown */}
-              <div>
-                <Label htmlFor="status" required>
-                  Status
-                </Label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status.toString()} // Convert boolean to string for select
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {formData.status
-                    ? "This bus will be active and available for student transportation"
-                    : "This bus will be inactive and not available for transportation"}
-                </p>
+              {/* Helper Information */}
+              <div className="p-6 bg-white border border-gray-100 rounded-xl shadow-xs dark:bg-gray-800/50 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-lg dark:bg-purple-900/30">
+                    <FaUsers className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Helper Information
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="helperName" required className="mb-2">
+                      Helper Name
+                    </Label>
+                    <Input
+                      id="helperName"
+                      name="helperName"
+                      placeholder="Enter helper's full name"
+                      value={formData.helperName}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="helperNumber" required className="mb-2">
+                      Helper Number
+                    </Label>
+                    <Input
+                      id="helperNumber"
+                      name="helperNumber"
+                      placeholder="Enter contact number"
+                      value={formData.helperNumber}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="helperAge" required className="mb-2">
+                      Helper Age
+                    </Label>
+                    <Input
+                      id="helperAge"
+                      name="helperAge"
+                      placeholder="Enter helper's age"
+                      value={formData.helperAge}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="helperArcNumber" required className="mb-2">
+                      Helper ARC Number
+                    </Label>
+                    <Input
+                      id="helperArcNumber"
+                      name="helperArcNumber"
+                      placeholder="Enter ARC number"
+                      value={formData.helperArcNumber}
+                      onChange={handleChange}
+                      className="transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
 
+              {/* Submit Button */}
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="w-full rounded-lg bg-blue-600 px-5 py-3 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
                     <svg
-                      className="w-4 h-4 mr-2 animate-spin"
+                      className="w-5 h-5 mr-3 animate-spin"
                       fill="none"
                       viewBox="0 0 24 24"
                     >
@@ -230,7 +445,10 @@ export default function AddBuses() {
                     Creating Bus...
                   </span>
                 ) : (
-                  "Save Bus"
+                  <span className="flex items-center justify-center">
+                    <FaCheck className="w-5 h-5 mr-2" />
+                    Save Bus Information
+                  </span>
                 )}
               </button>
             </form>
