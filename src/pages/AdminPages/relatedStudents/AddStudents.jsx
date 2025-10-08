@@ -12,7 +12,6 @@ import CustomDatePicker from "../../../components/form/input/DatePicker";
 import { useAuthStore } from "../../../hooks/useAuth";
 import Alert from "../../../components/ui/alert/Alert";
 import MultiSelect from "../../../components/form/MultiSelect";
-import { Modal } from "../../../components/ui/modal";
 import SuccessMessage from "../../../components/ui/success/SuccessMessage";
 
 export default function AddStudents() {
@@ -22,15 +21,7 @@ export default function AddStudents() {
   const [classes, setClasses] = useState([]);
   const [courses, setCourses] = useState([]);
   const [buses, setBuses] = useState([]);
-  const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showAddSchoolModal, setShowAddSchoolModal] = useState(false);
-  const [newSchoolData, setNewSchoolData] = useState({
-    schoolName: "",
-    schoolAddress: "",
-    schoolPhone: "",
-    schoolEmail: "",
-  });
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -45,38 +36,6 @@ export default function AddStudents() {
       });
     }
   }, [showSuccess]);
-
-  // Hardcoded schools data
-  const hardcodedSchools = [
-    {
-      _id: "school1",
-      schoolName: "Seoul International School",
-      address: "123 Gangnam-gu, Seoul",
-      phone: "+82-2-123-4567",
-      email: "info@seoulis.edu",
-    },
-    {
-      _id: "school2",
-      schoolName: "Busan Global Academy",
-      address: "456 Haeundae-gu, Busan",
-      phone: "+82-51-765-4321",
-      email: "contact@busanglobal.edu",
-    },
-    {
-      _id: "school3",
-      schoolName: "Daegu English Academy",
-      address: "789 Jung-gu, Daegu",
-      phone: "+82-53-888-9999",
-      email: "admin@daeguenglish.edu",
-    },
-    {
-      _id: "school4",
-      schoolName: "Incheon Language School",
-      address: "321 Yeonsu-gu, Incheon",
-      phone: "+82-32-555-7777",
-      email: "info@incheonlang.edu",
-    },
-  ];
 
   // Transform classes data for MultiSelect
   const classOptions = classes.map((cls) => ({
@@ -117,8 +76,15 @@ export default function AddStudents() {
     studentEmail: "",
     parentEmail: "",
 
-    // School Information
-    school: "",
+    // School Information - Direct fields instead of dropdown
+    school: {
+      name: "",
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "South Korea",
+    },
 
     // Enrollment Information
     dateOfEnrollment: "",
@@ -146,6 +112,9 @@ export default function AddStudents() {
 
     // External Login Credentials
     externalLoginCredential: [],
+
+    // Picture
+    picture: "",
   });
 
   // External Login Credential state
@@ -211,21 +180,10 @@ export default function AddStudents() {
     }
   };
 
-  const fetchSchools = async () => {
-    try {
-      // Using hardcoded data
-      setSchools(hardcodedSchools);
-    } catch (error) {
-      console.error("Error fetching schools:", error);
-      setSchools(hardcodedSchools);
-    }
-  };
-
   useEffect(() => {
     fetchClasses();
     fetchCourses();
     fetchBuses();
-    fetchSchools();
   }, [API_URL, token]);
 
   // Handle regular input changes
@@ -271,56 +229,90 @@ export default function AddStudents() {
     }));
   };
 
-  // Handle new school input changes
-  const handleNewSchoolChange = (e) => {
-    const { name, value } = e.target;
-    setNewSchoolData((prev) => ({
+  // Handle school field changes
+  const handleSchoolChange = (field, value) => {
+    setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      school: {
+        ...prev.school,
+        [field]: value,
+      },
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [field]: null,
     }));
   };
 
-  // Handle adding new school
-  const handleAddNewSchool = () => {
-    if (!newSchoolData.schoolName.trim()) {
-      setAlert({
-        variant: "error",
-        title: "Validation Error",
-        message: "School name is required!",
-      });
-      setTimeout(() => setAlert(null), 3000);
+  // Handle picture upload with file size validation
+  const handlePictureChange = (e) => {
+    const file = e.target.files[0];
+
+    if (!file) {
       return;
     }
 
-    const newSchool = {
-      _id: `school${Date.now()}`,
-      schoolName: newSchoolData.schoolName.trim(),
-      address: newSchoolData.schoolAddress.trim(),
-      phone: newSchoolData.schoolPhone.trim(),
-      email: newSchoolData.schoolEmail.trim(),
+    // Check file size (2MB = 2 * 1024 * 1024 bytes)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    if (file.size > maxSize) {
+      setAlert({
+        variant: "error",
+        title: "File Too Large",
+        message: "Please select an image smaller than 2MB.",
+      });
+      setTimeout(() => setAlert(null), 5000);
+
+      // Reset the file input
+      e.target.value = "";
+      return;
+    }
+
+    // Check file type
+    const validImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!validImageTypes.includes(file.type)) {
+      setAlert({
+        variant: "error",
+        title: "Invalid File Type",
+        message: "Please select a valid image file (JPEG, PNG, GIF, or WebP).",
+      });
+      setTimeout(() => setAlert(null), 5000);
+
+      // Reset the file input
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData((prev) => ({
+        ...prev,
+        picture: reader.result, // This will be the base64 string
+      }));
     };
+    reader.onerror = () => {
+      setAlert({
+        variant: "error",
+        title: "Upload Error",
+        message: "Failed to read the image file. Please try again.",
+      });
+      setTimeout(() => setAlert(null), 5000);
+    };
+    reader.readAsDataURL(file);
+  };
 
-    setSchools((prev) => [...prev, newSchool]);
-
+  // Remove picture
+  const handleRemovePicture = () => {
     setFormData((prev) => ({
       ...prev,
-      school: newSchool._id,
+      picture: "",
     }));
-
-    setNewSchoolData({
-      schoolName: "",
-      schoolAddress: "",
-      schoolPhone: "",
-      schoolEmail: "",
-    });
-    setShowAddSchoolModal(false);
-
-    setAlert({
-      variant: "success",
-      title: "Success",
-      message: `"${newSchool.schoolName}" added successfully!`,
-    });
-    setTimeout(() => setAlert(null), 3000);
   };
 
   // Handle date picker changes specifically
@@ -474,8 +466,20 @@ export default function AddStudents() {
     }
 
     // School Information Validation
-    if (!formData.school) {
-      newErrors.school = "Please select a school";
+    if (!formData.school.name.trim()) {
+      newErrors.schoolName = "School name is required!";
+    }
+    if (!formData.school.street.trim()) {
+      newErrors.schoolStreet = "School street address is required!";
+    }
+    if (!formData.school.city.trim()) {
+      newErrors.schoolCity = "School city is required!";
+    }
+    if (!formData.school.state.trim()) {
+      newErrors.schoolState = "School state/province is required!";
+    }
+    if (!formData.school.postalCode.trim()) {
+      newErrors.schoolPostalCode = "School postal code is required!";
     }
 
     // Enrollment Information Validation
@@ -537,7 +541,7 @@ export default function AddStudents() {
     }
 
     try {
-      // Prepare API data
+      // Prepare API data with actual form data
       const apiData = {
         studentId: formData.studentId.trim(),
         englishFirst: formData.englishFirst.trim(),
@@ -574,6 +578,19 @@ export default function AddStudents() {
         notes: formData.notes?.trim() || undefined,
         transportType: formData.transportType,
         bus: formData.transportType === "bus" ? formData.bus : undefined,
+
+        // Include school object from direct input fields
+        school: {
+          name: formData.school.name.trim(),
+          street: formData.school.street.trim(),
+          city: formData.school.city.trim(),
+          state: formData.school.state.trim(),
+          postalCode: formData.school.postalCode.trim(),
+          country: formData.school.country || "South Korea",
+        },
+
+        // Include picture if available
+        picture: formData.picture || undefined,
 
         // Include external login credentials
         externalLoginCredential:
@@ -636,10 +653,18 @@ export default function AddStudents() {
         fatherPhone: "",
         studentEmail: "",
         parentEmail: "",
-        school: "",
+        school: {
+          name: "",
+          street: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          country: "South Korea",
+        },
         dateOfEnrollment: "",
         classRef: [],
         courses: [],
+        classes: [],
         daysPreset: "",
         status: true,
         days: {
@@ -655,6 +680,7 @@ export default function AddStudents() {
         transportType: "walk",
         bus: "",
         externalLoginCredential: [],
+        picture: "",
       });
 
       // Reset external login credentials
@@ -781,10 +807,42 @@ export default function AddStudents() {
                     hint={errors.studentId}
                   />
                 </div>
-
                 <div className="sm:col-span-2">
-                  <Label htmlFor="image">Student Image</Label>
-                  <FileInput id="image" type="file" name="image" />
+                  <Label htmlFor="picture">Student Image</Label>
+                  <div className="space-y-2">
+                    <FileInput
+                      id="picture"
+                      type="file"
+                      name="picture"
+                      onChange={handlePictureChange}
+                      accept="image/jpeg, image/jpg, image/png, image/gif, image/webp"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Maximum file size: 2MB. Supported formats: JPEG, PNG, GIF,
+                      WebP
+                    </p>
+
+                    {formData.picture && (
+                      <div className="mt-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={formData.picture}
+                            alt="Student preview"
+                            className="w-20 h-20 rounded-lg object-cover border"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRemovePicture}
+                            className="text-error-600 hover:text-error-700"
+                          >
+                            Remove Image
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -885,7 +943,7 @@ export default function AddStudents() {
               </div>
             </section>
 
-            {/* School Information Section - IMPROVED RESPONSIVENESS */}
+            {/* School Information Section - UPDATED */}
             <section className="p-4 bg-gray-50 rounded-xl dark:bg-gray-900/50 sm:p-6">
               <div className="flex items-center mb-4 sm:mb-6">
                 <div className="flex items-center justify-center w-8 h-8 mr-3 bg-indigo-100 rounded-xl dark:bg-indigo-900/30 sm:w-10 sm:h-10 sm:mr-4">
@@ -908,60 +966,116 @@ export default function AddStudents() {
                     School Information
                   </h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300 sm:text-sm">
-                    Select the student's school
+                    Enter the student's school details
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="school" required>
-                    School
+              <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                <div className="sm:col-span-2">
+                  <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    School Details
                   </Label>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <select
-                      id="school"
-                      name="school"
-                      value={formData.school}
-                      onChange={handleChange}
-                      className={`flex-1 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-white sm:px-4 sm:py-3 sm:text-base ${
-                        errors.school
-                          ? "border-error-500 focus:ring-error-500/20 dark:border-error-500"
-                          : "border-gray-200 focus:ring-blue-500 dark:border-gray-600"
-                      }`}
-                    >
-                      <option value="">Select a School</option>
-                      {schools.map((school) => (
-                        <option key={school._id} value={school._id}>
-                          {school.schoolName}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowAddSchoolModal(true)}
-                      className="whitespace-nowrap text-sm sm:text-base"
-                    >
-                      + Add New
-                    </Button>
-                  </div>
-                  {errors.school && (
-                    <p className="mt-1.5 text-xs text-error-500">
-                      {errors.school}
-                    </p>
-                  )}
-                  {formData.school && (
-                    <div className="mt-2 p-2 text-xs bg-blue-50 rounded-lg dark:bg-blue-900/20 sm:p-3 sm:text-sm">
-                      <p className="text-blue-800 dark:text-blue-200">
-                        Selected:{" "}
-                        {
-                          schools.find((s) => s._id === formData.school)
-                            ?.schoolName
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="schoolName" required>
+                        School Name
+                      </Label>
+                      <Input
+                        id="schoolName"
+                        type="text"
+                        name="schoolName"
+                        value={formData.school.name}
+                        onChange={(e) =>
+                          handleSchoolChange("name", e.target.value)
                         }
-                      </p>
+                        placeholder="Seoul International Academy"
+                        error={!!errors.schoolName}
+                        hint={errors.schoolName}
+                      />
                     </div>
-                  )}
+                    <div>
+                      <Label htmlFor="schoolStreet" required>
+                        School Street
+                      </Label>
+                      <Input
+                        id="schoolStreet"
+                        type="text"
+                        name="schoolStreet"
+                        value={formData.school.street}
+                        onChange={(e) =>
+                          handleSchoolChange("street", e.target.value)
+                        }
+                        placeholder="123 Education Boulevard"
+                        error={!!errors.schoolStreet}
+                        hint={errors.schoolStreet}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="schoolCity" required>
+                        School City
+                      </Label>
+                      <Input
+                        id="schoolCity"
+                        type="text"
+                        name="schoolCity"
+                        value={formData.school.city}
+                        onChange={(e) =>
+                          handleSchoolChange("city", e.target.value)
+                        }
+                        placeholder="Seoul"
+                        error={!!errors.schoolCity}
+                        hint={errors.schoolCity}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="schoolState" required>
+                        School State/Province
+                      </Label>
+                      <Input
+                        id="schoolState"
+                        type="text"
+                        name="schoolState"
+                        value={formData.school.state}
+                        onChange={(e) =>
+                          handleSchoolChange("state", e.target.value)
+                        }
+                        placeholder="Seoul"
+                        error={!!errors.schoolState}
+                        hint={errors.schoolState}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="schoolPostalCode" required>
+                        School Postal Code
+                      </Label>
+                      <Input
+                        id="schoolPostalCode"
+                        type="text"
+                        name="schoolPostalCode"
+                        value={formData.school.postalCode}
+                        onChange={(e) =>
+                          handleSchoolChange("postalCode", e.target.value)
+                        }
+                        placeholder="04516"
+                        error={!!errors.schoolPostalCode}
+                        hint={errors.schoolPostalCode}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="schoolCountry">School Country</Label>
+                      <Input
+                        id="schoolCountry"
+                        type="text"
+                        name="schoolCountry"
+                        value={formData.school.country}
+                        onChange={(e) =>
+                          handleSchoolChange("country", e.target.value)
+                        }
+                        placeholder="South Korea"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -998,7 +1112,7 @@ export default function AddStudents() {
                 {/* Address Section */}
                 <div className="sm:col-span-2">
                   <Label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Address
+                    Home Address
                   </Label>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
@@ -1368,7 +1482,7 @@ export default function AddStudents() {
                       defaultSelected={formData.classRef}
                       onChange={handleClassSelection}
                       disabled={false}
-                      hideSelectedItems={true} // NEW: Hide selected items from dropdown
+                      hideSelectedItems={true}
                     />
                   </div>
                   {errors.classRef && (
@@ -1412,7 +1526,7 @@ export default function AddStudents() {
                       defaultSelected={formData.courses}
                       onChange={handleCourseSelection}
                       disabled={false}
-                      hideSelectedItems={true} // NEW: Hide selected items from dropdown
+                      hideSelectedItems={true}
                     />
                   </div>
                   {errors.courses && (
@@ -1628,94 +1742,6 @@ export default function AddStudents() {
           </form>
         </ComponentCard>
       </div>
-
-      {/* Add New School Modal */}
-      <Modal
-        isOpen={showAddSchoolModal}
-        onClose={() => setShowAddSchoolModal(false)}
-        className="max-w-md mx-4"
-      >
-        <div className="p-4 sm:p-6">
-          <div className="mb-4 sm:mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white sm:text-xl">
-              Add New School
-            </h3>
-            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-              Add a new school to the system
-            </p>
-          </div>
-
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <Label htmlFor="schoolName" required>
-                School Name
-              </Label>
-              <Input
-                id="schoolName"
-                type="text"
-                name="schoolName"
-                value={newSchoolData.schoolName}
-                onChange={handleNewSchoolChange}
-                placeholder="Enter school name"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="schoolAddress">School Address</Label>
-              <Input
-                id="schoolAddress"
-                type="text"
-                name="schoolAddress"
-                value={newSchoolData.schoolAddress}
-                onChange={handleNewSchoolChange}
-                placeholder="Enter school address"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="schoolPhone">School Phone</Label>
-              <Input
-                id="schoolPhone"
-                type="tel"
-                name="schoolPhone"
-                value={newSchoolData.schoolPhone}
-                onChange={handleNewSchoolChange}
-                placeholder="+82-2-123-4567"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="schoolEmail">School Email</Label>
-              <Input
-                id="schoolEmail"
-                type="email"
-                name="schoolEmail"
-                value={newSchoolData.schoolEmail}
-                onChange={handleNewSchoolChange}
-                placeholder="school@example.com"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowAddSchoolModal(false)}
-              className="flex-1 text-sm sm:text-base"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleAddNewSchool}
-              className="flex-1 text-sm sm:text-base"
-            >
-              Add School
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }

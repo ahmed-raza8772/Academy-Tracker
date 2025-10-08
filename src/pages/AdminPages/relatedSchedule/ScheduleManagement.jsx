@@ -25,6 +25,9 @@ export default function ScheduleManagement() {
   // State management
   const [courses, setCourses] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [teachers, setTeachers] = useState([]); // All teachers from API
+  const [homeTeachers, setHomeTeachers] = useState([]); // Teachers with teacherType = "Home"
+  const [otherTeachers, setOtherTeachers] = useState([]); // Teachers with teacherType = "Native" or "PartTime"
   const [loading, setLoading] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [alert, setAlert] = useState(null);
@@ -39,7 +42,7 @@ export default function ScheduleManagement() {
     weekNumber: 1,
     startDate: "",
     endDate: "",
-    teachers: ["67000d16aabec65d0c06e130", "67000d1faabec65d0c06e145"],
+    teachers: ["", ""], // [homeTeacherId, otherTeacherId]
     scheduleSlots: [
       {
         day: "Monday",
@@ -50,6 +53,55 @@ export default function ScheduleManagement() {
 
   // Validation errors
   const [errors, setErrors] = useState({});
+
+  // Fetch all users and filter teachers
+  const fetchTeachers = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/createUser/getAll`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Fetched users:", data);
+
+      // Filter users where role = "teacher"
+      const allTeachers = Array.isArray(data)
+        ? data.filter((user) => user.role === "teacher")
+        : [];
+
+      setTeachers(allTeachers);
+
+      // Separate teachers by teacherType
+      const homeTeachersList = allTeachers.filter(
+        (teacher) => teacher.teacherType === "Home"
+      );
+      const otherTeachersList = allTeachers.filter(
+        (teacher) =>
+          teacher.teacherType === "Native" || teacher.teacherType === "PartTime"
+      );
+
+      setHomeTeachers(homeTeachersList);
+      setOtherTeachers(otherTeachersList);
+
+      console.log("Home Teachers:", homeTeachersList);
+      console.log("Other Teachers:", otherTeachersList);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+      setAlert({
+        variant: "error",
+        title: "Error",
+        message: "Failed to load teachers",
+      });
+    }
+  };
 
   // Fetch courses and schedules
   const fetchCourses = async () => {
@@ -101,6 +153,7 @@ export default function ScheduleManagement() {
   useEffect(() => {
     fetchCourses();
     fetchSchedules();
+    fetchTeachers();
   }, [API_URL, token]);
 
   // Improved validation function
@@ -125,6 +178,14 @@ export default function ScheduleManagement() {
       if (end < start) {
         newErrors.endDate = "End date cannot be before start date";
       }
+    }
+
+    // Validate teachers
+    if (!formData.teachers[0]) {
+      newErrors.homeTeacher = "Home teacher is required";
+    }
+    if (!formData.teachers[1]) {
+      newErrors.otherTeacher = "Second teacher is required";
     }
 
     // Validate schedule slots
@@ -154,6 +215,26 @@ export default function ScheduleManagement() {
       setErrors((prev) => ({
         ...prev,
         [name]: null,
+      }));
+    }
+  };
+
+  // Handle teacher selection changes
+  const handleTeacherChange = (index, value) => {
+    const updatedTeachers = [...formData.teachers];
+    updatedTeachers[index] = value;
+
+    setFormData((prev) => ({
+      ...prev,
+      teachers: updatedTeachers,
+    }));
+
+    // Clear teacher errors
+    const errorKey = index === 0 ? "homeTeacher" : "otherTeacher";
+    if (errors[errorKey]) {
+      setErrors((prev) => ({
+        ...prev,
+        [errorKey]: null,
       }));
     }
   };
@@ -235,7 +316,7 @@ export default function ScheduleManagement() {
       weekNumber: 1,
       startDate: "",
       endDate: "",
-      teachers: ["67000d16aabec65d0c06e130", "67000d1faabec65d0c06e145"],
+      teachers: ["", ""], // Reset to empty selections
       scheduleSlots: [
         {
           day: "Monday",
@@ -271,13 +352,34 @@ export default function ScheduleManagement() {
       weekNumber: schedule.weekNumber,
       startDate: schedule.startDate ? schedule.startDate.split("T")[0] : "",
       endDate: schedule.endDate ? schedule.endDate.split("T")[0] : "",
-      teachers: schedule.teachers,
+      teachers: schedule.teachers || ["", ""],
       scheduleSlots: schedule.scheduleSlots.map((slot) => ({
         day: slot.day,
         time: slot.time,
       })),
     });
     setIsEditModalOpen(true);
+  };
+
+  // Get teacher name by ID
+  const getTeacherName = (teacherId) => {
+    if (!teacherId) return "Not selected";
+    const teacher = teachers.find((t) => t._id === teacherId);
+    return teacher ? teacher.fullname : "Unknown Teacher";
+  };
+
+  // Get teacher type by ID
+  const getTeacherType = (teacherId) => {
+    if (!teacherId) return "";
+    const teacher = teachers.find((t) => t._id === teacherId);
+    return teacher ? teacher.teacherType : "";
+  };
+
+  // Get teacher email by ID
+  const getTeacherEmail = (teacherId) => {
+    if (!teacherId) return "";
+    const teacher = teachers.find((t) => t._id === teacherId);
+    return teacher ? teacher.email : "";
   };
 
   // Handle form submission for create
@@ -312,13 +414,15 @@ export default function ScheduleManagement() {
         endDate = end.toISOString().split("T")[0];
       }
 
-      // Prepare API data
+      // Prepare API data - filter out empty teacher IDs
+      const teacherIds = formData.teachers.filter((id) => id !== "");
+
       const apiData = {
         course: formData.course,
         weekNumber: formData.weekNumber,
         startDate: startDate ? `${startDate}T00:00:00.000Z` : undefined,
         endDate: endDate ? `${endDate}T00:00:00.000Z` : undefined,
-        teachers: formData.teachers,
+        teachers: teacherIds,
         scheduleSlots: formData.scheduleSlots,
       };
 
@@ -352,7 +456,6 @@ export default function ScheduleManagement() {
       const result = await response.json();
       console.log("API Response:", result);
 
-      // Reset form and show success message
       resetForm();
       setIsModalOpen(false);
 
@@ -393,6 +496,9 @@ export default function ScheduleManagement() {
     setModalLoading(true);
 
     try {
+      // Filter out empty teacher IDs
+      const teacherIds = formData.teachers.filter((id) => id !== "");
+
       const apiData = {
         course: formData.course,
         weekNumber: formData.weekNumber,
@@ -402,7 +508,7 @@ export default function ScheduleManagement() {
         endDate: formData.endDate
           ? `${formData.endDate}T00:00:00.000Z`
           : undefined,
-        teachers: formData.teachers,
+        teachers: teacherIds,
         scheduleSlots: formData.scheduleSlots,
       };
 
@@ -587,7 +693,10 @@ export default function ScheduleManagement() {
                 <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
-                    onClick={fetchSchedules}
+                    onClick={() => {
+                      fetchSchedules();
+                      fetchTeachers();
+                    }}
                     disabled={loading}
                     className="whitespace-nowrap"
                   >
@@ -643,6 +752,12 @@ export default function ScheduleManagement() {
                           className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                         >
                           Date Range
+                        </TableCell>
+                        <TableCell
+                          isHeader
+                          className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                        >
+                          Teachers
                         </TableCell>
                         <TableCell
                           isHeader
@@ -704,6 +819,25 @@ export default function ScheduleManagement() {
                               </TableCell>
                               <TableCell className="px-6 py-4">
                                 <div className="space-y-1 max-w-xs">
+                                  {schedule.teachers?.map(
+                                    (teacherId, teacherIndex) => (
+                                      <div
+                                        key={teacherIndex}
+                                        className="flex items-center justify-between text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"
+                                      >
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                                          {getTeacherName(teacherId)}
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400">
+                                          {getTeacherType(teacherId)}
+                                        </span>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-4">
+                                <div className="space-y-1 max-w-xs">
                                   {schedule.scheduleSlots?.map(
                                     (slot, slotIndex) => (
                                       <div
@@ -758,7 +892,7 @@ export default function ScheduleManagement() {
                       ) : (
                         <TableRow>
                           <TableCell
-                            colSpan={6}
+                            colSpan={7}
                             className="px-6 py-12 text-center"
                           >
                             <div className="text-center">
@@ -958,6 +1092,131 @@ export default function ScheduleManagement() {
                 </div>
               </div>
 
+              {/* Teacher Selection Section */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="mb-6">
+                  <Label className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Teacher Assignment
+                  </Label>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    Assign teachers to this schedule
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Home Teacher (Fixed) */}
+                  <div>
+                    <Label
+                      htmlFor="homeTeacher"
+                      required
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Home Teacher (Required)
+                    </Label>
+                    <select
+                      id="homeTeacher"
+                      value={formData.teachers[0] || ""}
+                      onChange={(e) => handleTeacherChange(0, e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        errors.homeTeacher
+                          ? "border-red-300 focus:ring-red-500 dark:border-red-600"
+                          : "border-gray-300 focus:ring-blue-500 dark:border-gray-600"
+                      }`}
+                      required
+                      disabled={modalLoading}
+                    >
+                      <option value="">Select Home Teacher...</option>
+                      {homeTeachers.map((teacher) => (
+                        <option key={teacher._id} value={teacher._id}>
+                          {teacher.fullname} - {teacher.teacherType}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.homeTeacher && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.homeTeacher}
+                      </p>
+                    )}
+                    {homeTeachers.length === 0 && (
+                      <p className="mt-1 text-sm text-yellow-600 dark:text-yellow-400">
+                        No Home teachers available
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Second Teacher (Native/PartTime) */}
+                  <div>
+                    <Label
+                      htmlFor="otherTeacher"
+                      required
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Second Teacher (Required)
+                    </Label>
+                    <select
+                      id="otherTeacher"
+                      value={formData.teachers[1] || ""}
+                      onChange={(e) => handleTeacherChange(1, e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        errors.otherTeacher
+                          ? "border-red-300 focus:ring-red-500 dark:border-red-600"
+                          : "border-gray-300 focus:ring-blue-500 dark:border-gray-600"
+                      }`}
+                      required
+                      disabled={modalLoading}
+                    >
+                      <option value="">Select Second Teacher...</option>
+                      {otherTeachers.map((teacher) => (
+                        <option key={teacher._id} value={teacher._id}>
+                          {teacher.fullname} - {teacher.teacherType}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.otherTeacher && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.otherTeacher}
+                      </p>
+                    )}
+                    {otherTeachers.length === 0 && (
+                      <p className="mt-1 text-sm text-yellow-600 dark:text-yellow-400">
+                        No Native or PartTime teachers available
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Selected Teachers Preview */}
+                {(formData.teachers[0] || formData.teachers[1]) && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
+                    <h5 className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">
+                      Selected Teachers:
+                    </h5>
+                    <div className="space-y-2">
+                      {formData.teachers[0] && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-700 dark:text-green-400">
+                            Home Teacher:
+                          </span>
+                          <span className="font-medium text-green-800 dark:text-green-300">
+                            {getTeacherName(formData.teachers[0])}
+                          </span>
+                        </div>
+                      )}
+                      {formData.teachers[1] && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-700 dark:text-green-400">
+                            Second Teacher:
+                          </span>
+                          <span className="font-medium text-green-800 dark:text-green-300">
+                            {getTeacherName(formData.teachers[1])}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Schedule Slots Section */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <div className="flex items-center justify-between mb-6">
@@ -1101,37 +1360,6 @@ export default function ScheduleManagement() {
                   ))}
                 </div>
               </div>
-
-              {/* Teachers Info */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
-                <div className="flex items-start">
-                  <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                      Teacher Assignment
-                    </p>
-                    <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                      Currently using predefined teacher IDs. The system will
-                      automatically assign these teachers to the schedule.
-                    </p>
-                    <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                      Teacher IDs: {formData.teachers.join(", ")}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Form Actions */}
@@ -1176,7 +1404,7 @@ export default function ScheduleManagement() {
         </div>
       </Modal>
 
-      {/* View Schedule Modal */}
+      {/* View Schedule Modal - Updated to show teacher names */}
       <Modal
         isOpen={isViewModalOpen}
         onClose={handleModalClose}
@@ -1266,6 +1494,32 @@ export default function ScheduleManagement() {
 
               <div>
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                  Assigned Teachers
+                </Label>
+                <div className="space-y-3">
+                  {selectedSchedule.teachers?.map((teacherId, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30"
+                    >
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {getTeacherName(teacherId)}
+                        </span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                          ({getTeacherType(teacherId)})
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {getTeacherEmail(teacherId)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
                   Schedule Slots
                 </Label>
                 <div className="space-y-3">
@@ -1284,15 +1538,6 @@ export default function ScheduleManagement() {
                   ))}
                 </div>
               </div>
-
-              <div>
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Teacher IDs
-                </Label>
-                <p className="text-sm text-gray-900 dark:text-white">
-                  {selectedSchedule.teachers?.join(", ")}
-                </p>
-              </div>
             </div>
           )}
 
@@ -1302,7 +1547,7 @@ export default function ScheduleManagement() {
         </div>
       </Modal>
 
-      {/* Edit Schedule Modal */}
+      {/* Edit Schedule Modal - Updated with teacher selection */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={handleModalClose}
@@ -1459,6 +1704,121 @@ export default function ScheduleManagement() {
                 </div>
               </div>
 
+              {/* Teacher Selection Section for Edit */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="mb-6">
+                  <Label className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Teacher Assignment
+                  </Label>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    Update teacher assignments for this schedule
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Home Teacher (Fixed) */}
+                  <div>
+                    <Label
+                      htmlFor="edit-homeTeacher"
+                      required
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Home Teacher (Required)
+                    </Label>
+                    <select
+                      id="edit-homeTeacher"
+                      value={formData.teachers[0] || ""}
+                      onChange={(e) => handleTeacherChange(0, e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        errors.homeTeacher
+                          ? "border-red-300 focus:ring-red-500 dark:border-red-600"
+                          : "border-gray-300 focus:ring-blue-500 dark:border-gray-600"
+                      }`}
+                      required
+                      disabled={modalLoading}
+                    >
+                      <option value="">Select Home Teacher...</option>
+                      {homeTeachers.map((teacher) => (
+                        <option key={teacher._id} value={teacher._id}>
+                          {teacher.fullname} - {teacher.teacherType}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.homeTeacher && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.homeTeacher}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Second Teacher (Native/PartTime) */}
+                  <div>
+                    <Label
+                      htmlFor="edit-otherTeacher"
+                      required
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Second Teacher (Required)
+                    </Label>
+                    <select
+                      id="edit-otherTeacher"
+                      value={formData.teachers[1] || ""}
+                      onChange={(e) => handleTeacherChange(1, e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        errors.otherTeacher
+                          ? "border-red-300 focus:ring-red-500 dark:border-red-600"
+                          : "border-gray-300 focus:ring-blue-500 dark:border-gray-600"
+                      }`}
+                      required
+                      disabled={modalLoading}
+                    >
+                      <option value="">Select Second Teacher...</option>
+                      {otherTeachers.map((teacher) => (
+                        <option key={teacher._id} value={teacher._id}>
+                          {teacher.fullname} - {teacher.teacherType}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.otherTeacher && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.otherTeacher}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Selected Teachers Preview */}
+                {(formData.teachers[0] || formData.teachers[1]) && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
+                    <h5 className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">
+                      Selected Teachers:
+                    </h5>
+                    <div className="space-y-2">
+                      {formData.teachers[0] && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-700 dark:text-green-400">
+                            Home Teacher:
+                          </span>
+                          <span className="font-medium text-green-800 dark:text-green-300">
+                            {getTeacherName(formData.teachers[0])}
+                          </span>
+                        </div>
+                      )}
+                      {formData.teachers[1] && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-700 dark:text-green-400">
+                            Second Teacher:
+                          </span>
+                          <span className="font-medium text-green-800 dark:text-green-300">
+                            {getTeacherName(formData.teachers[1])}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Schedule Slots Section */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <div className="flex items-center justify-between mb-6">
@@ -1600,37 +1960,6 @@ export default function ScheduleManagement() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Teachers Info */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
-                <div className="flex items-start">
-                  <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                      Teacher Assignment
-                    </p>
-                    <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                      Currently using predefined teacher IDs. The system will
-                      automatically assign these teachers to the schedule.
-                    </p>
-                    <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                      Teacher IDs: {formData.teachers.join(", ")}
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
