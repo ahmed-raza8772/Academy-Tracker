@@ -429,7 +429,7 @@ export default function ScheduleManagement() {
       const teacherIds = formData.teachers.filter((id) => id !== "");
 
       const apiData = {
-        course: formData.course,
+        courseId: formData.course,
         weekNumber: formData.weekNumber,
         startDate: startDate ? `${startDate}T00:00:00.000Z` : undefined,
         endDate: endDate ? `${endDate}T00:00:00.000Z` : undefined,
