@@ -1,6 +1,8 @@
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import PageMeta from "../../../components/common/PageMeta";
 import { useEffect, useState, useRef } from "react";
+import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 // Import your custom components
 import Button from "../../../components/ui/button/Button";
@@ -17,7 +19,7 @@ import SuccessMessage from "../../../components/ui/success/SuccessMessage";
 export default function AddStudents() {
   const API_URL = import.meta.env.VITE_API_URL;
   const { token } = useAuthStore();
-  const [alert, setAlert] = useState(false);
+  const [alert, setAlert] = useState(null);
   const [classes, setClasses] = useState([]);
   const [courses, setCourses] = useState([]);
   const [buses, setBuses] = useState([]);
@@ -26,6 +28,19 @@ export default function AddStudents() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const topRef = useRef(null);
+
+  // Image crop states
+  const [crop, setCrop] = useState({
+    unit: "%",
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5,
+  });
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const [imgSrc, setImgSrc] = useState("");
+  const [showCropModal, setShowCropModal] = useState(false);
+  const imgRef = useRef(null);
 
   // Scroll to top when success message is shown
   useEffect(() => {
@@ -245,7 +260,24 @@ export default function AddStudents() {
     }));
   };
 
-  // Handle picture upload with file size validation
+  // Center the crop initially
+  function centerAspectCrop(mediaWidth, mediaHeight, aspect = 1) {
+    return centerCrop(
+      makeAspectCrop(
+        {
+          unit: "%",
+          width: 90,
+        },
+        aspect,
+        mediaWidth,
+        mediaHeight
+      ),
+      mediaWidth,
+      mediaHeight
+    );
+  }
+
+  // Handle file selection
   const handlePictureChange = (e) => {
     const file = e.target.files[0];
 
@@ -253,17 +285,15 @@ export default function AddStudents() {
       return;
     }
 
-    // Check file size (2MB = 2 * 1024 * 1024 bytes)
-    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    // Check file size (50KB = 50 * 1024 bytes)
+    const maxSize = 50 * 1024; // 50KB in bytes
     if (file.size > maxSize) {
       setAlert({
         variant: "error",
         title: "File Too Large",
-        message: "Please select an image smaller than 2MB.",
+        message: "Please select an image smaller than 50KB.",
       });
       setTimeout(() => setAlert(null), 5000);
-
-      // Reset the file input
       e.target.value = "";
       return;
     }
@@ -283,28 +313,137 @@ export default function AddStudents() {
         message: "Please select a valid image file (JPEG, PNG, GIF, or WebP).",
       });
       setTimeout(() => setAlert(null), 5000);
-
-      // Reset the file input
       e.target.value = "";
       return;
     }
 
+    // Create URL for the image and open crop modal
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData((prev) => ({
-        ...prev,
-        picture: reader.result, // This will be the base64 string
-      }));
-    };
-    reader.onerror = () => {
-      setAlert({
-        variant: "error",
-        title: "Upload Error",
-        message: "Failed to read the image file. Please try again.",
-      });
-      setTimeout(() => setAlert(null), 5000);
-    };
+    reader.addEventListener("load", () => {
+      setImgSrc(reader.result?.toString() || "");
+      setShowCropModal(true);
+    });
     reader.readAsDataURL(file);
+  };
+
+  // Handle image load for cropping
+  const onImageLoad = (e) => {
+    const { naturalWidth: width, naturalHeight: height } = e.currentTarget;
+    const newCrop = centerAspectCrop(width, height, 1);
+    setCrop(newCrop);
+    setCompletedCrop(newCrop);
+  };
+
+  // Get cropped image
+  const getCroppedImg = (image, crop) => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!crop || !image) {
+      return null;
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    const pixelCrop = {
+      x: crop.x * scaleX,
+      y: crop.y * scaleY,
+      width: crop.width * scaleX,
+      height: crop.height * scaleY,
+    };
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            console.error("Canvas is empty");
+            resolve(null);
+            return;
+          }
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        },
+        "image/jpeg",
+        0.7 // Adjust quality to meet 50KB limit
+      );
+    });
+  };
+
+  // Apply crop and save image
+  const handleCropApply = async () => {
+    if (imgRef.current && completedCrop?.width && completedCrop?.height) {
+      try {
+        const base64Image = await getCroppedImg(imgRef.current, completedCrop);
+
+        if (!base64Image) {
+          throw new Error("Failed to crop image");
+        }
+
+        // Check if the cropped image is under 50KB
+        const base64Data = base64Image.split(",")[1];
+        const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+        const sizeInKB = sizeInBytes / 1024;
+
+        if (sizeInKB > 50) {
+          setAlert({
+            variant: "error",
+            title: "Image Too Large",
+            message:
+              "Cropped image exceeds 50KB limit. Please crop a smaller area or reduce quality.",
+          });
+          return;
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          picture: base64Image,
+        }));
+
+        setShowCropModal(false);
+        setImgSrc("");
+        setCrop({
+          unit: "%",
+          width: 90,
+          height: 90,
+          x: 5,
+          y: 5,
+        });
+        setCompletedCrop(null);
+
+        setAlert({
+          variant: "success",
+          title: "Success",
+          message: "Image cropped and saved successfully!",
+        });
+        setTimeout(() => setAlert(null), 3000);
+      } catch (error) {
+        console.error("Error cropping image:", error);
+        setAlert({
+          variant: "error",
+          title: "Crop Error",
+          message: "Failed to crop image. Please try again.",
+        });
+        setTimeout(() => setAlert(null), 5000);
+      }
+    }
   };
 
   // Remove picture
@@ -313,6 +452,15 @@ export default function AddStudents() {
       ...prev,
       picture: "",
     }));
+    setImgSrc("");
+    setCrop({
+      unit: "%",
+      width: 90,
+      height: 90,
+      x: 5,
+      y: 5,
+    });
+    setCompletedCrop(null);
   };
 
   // Handle date picker changes specifically
@@ -693,6 +841,17 @@ export default function AddStudents() {
         },
       ]);
 
+      // Reset image states
+      setImgSrc("");
+      setCrop({
+        unit: "%",
+        width: 90,
+        height: 90,
+        x: 5,
+        y: 5,
+      });
+      setCompletedCrop(null);
+
       // Show success message
       setSuccessMessage(
         `Student "${formData.englishFirst} ${formData.englishLast}" has been successfully added to the system.`
@@ -737,6 +896,7 @@ export default function AddStudents() {
               title={alert.title}
               message={alert.message}
               showLink={false}
+              onClose={() => setAlert(null)}
             />
           </div>
         )}
@@ -818,8 +978,8 @@ export default function AddStudents() {
                       accept="image/jpeg, image/jpg, image/png, image/gif, image/webp"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Maximum file size: 2MB. Supported formats: JPEG, PNG, GIF,
-                      WebP
+                      Maximum file size: 50KB. Supported formats: JPEG, PNG,
+                      GIF, WebP
                     </p>
 
                     {formData.picture && (
@@ -943,7 +1103,7 @@ export default function AddStudents() {
               </div>
             </section>
 
-            {/* School Information Section - UPDATED */}
+            {/* School Information Section */}
             <section className="p-4 bg-gray-50 rounded-xl dark:bg-gray-900/50 sm:p-6">
               <div className="flex items-center mb-4 sm:mb-6">
                 <div className="flex items-center justify-center w-8 h-8 mr-3 bg-indigo-100 rounded-xl dark:bg-indigo-900/30 sm:w-10 sm:h-10 sm:mr-4">
@@ -1742,6 +1902,55 @@ export default function AddStudents() {
           </form>
         </ComponentCard>
       </div>
+
+      {/* Crop Modal - Placed outside the form */}
+      {showCropModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Crop Image</h3>
+              <button
+                onClick={() => setShowCropModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="max-h-96 overflow-auto mb-4">
+              {imgSrc && (
+                <ReactCrop
+                  crop={crop}
+                  onChange={(_, percentCrop) => setCrop(percentCrop)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={1}
+                  circularCrop={false}
+                >
+                  <img
+                    ref={imgRef}
+                    alt="Crop me"
+                    src={imgSrc}
+                    onLoad={onImageLoad}
+                    style={{ maxHeight: "400px", maxWidth: "100%" }}
+                  />
+                </ReactCrop>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCropModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCropApply}
+                disabled={!completedCrop?.width || !completedCrop?.height}
+              >
+                Apply Crop
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import PageMeta from "../../../components/common/PageMeta";
 import Loader from "../../../components/common/Loader";
@@ -21,6 +21,8 @@ import Button from "../../../components/ui/button/Button";
 import { useNavigate } from "react-router";
 import MultiSelect from "../../../components/form/MultiSelect";
 import FileInput from "../../../components/form/input/FileInput";
+import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 export default function ManageStudents() {
   const { token } = useAuthStore();
@@ -40,6 +42,19 @@ export default function ManageStudents() {
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+
+  // Image crop states
+  const [crop, setCrop] = useState({
+    unit: "%",
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5,
+  });
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const [imgSrc, setImgSrc] = useState("");
+  const [showCropModal, setShowCropModal] = useState(false);
+  const imgRef = useRef(null);
 
   // Transform classes data for MultiSelect
   const classOptions = classes.map((cls) => ({
@@ -106,6 +121,9 @@ export default function ManageStudents() {
 
     // External Login Credentials
     externalLoginCredential: [],
+
+    // Picture
+    picture: "",
   });
 
   // External Login Credential state
@@ -144,6 +162,209 @@ export default function ManageStudents() {
       email: "admin@daeguenglish.edu",
     },
   ];
+
+  // Center the crop initially
+  function centerAspectCrop(mediaWidth, mediaHeight, aspect = 1) {
+    return centerCrop(
+      makeAspectCrop(
+        {
+          unit: "%",
+          width: 90,
+        },
+        aspect,
+        mediaWidth,
+        mediaHeight
+      ),
+      mediaWidth,
+      mediaHeight
+    );
+  }
+
+  // Handle file selection
+  const handlePictureChange = (e) => {
+    const file = e.target.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    // Check file size (50KB = 50 * 1024 bytes)
+    const maxSize = 50 * 1024; // 50KB in bytes
+    if (file.size > maxSize) {
+      setAlert({
+        variant: "error",
+        title: "File Too Large",
+        message: "Please select an image smaller than 50KB.",
+      });
+      setTimeout(() => setAlert(null), 5000);
+      e.target.value = "";
+      return;
+    }
+
+    // Check file type
+    const validImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!validImageTypes.includes(file.type)) {
+      setAlert({
+        variant: "error",
+        title: "Invalid File Type",
+        message: "Please select a valid image file (JPEG, PNG, GIF, or WebP).",
+      });
+      setTimeout(() => setAlert(null), 5000);
+      e.target.value = "";
+      return;
+    }
+
+    // Create URL for the image and open crop modal
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      setImgSrc(reader.result?.toString() || "");
+      setShowCropModal(true);
+    });
+    reader.readAsDataURL(file);
+  };
+
+  // Handle image load for cropping
+  const onImageLoad = (e) => {
+    const { naturalWidth: width, naturalHeight: height } = e.currentTarget;
+    const newCrop = centerAspectCrop(width, height, 1);
+    setCrop(newCrop);
+    setCompletedCrop(newCrop);
+  };
+
+  // Get cropped image
+  const getCroppedImg = (image, crop) => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!crop || !image) {
+      return null;
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    const pixelCrop = {
+      x: crop.x * scaleX,
+      y: crop.y * scaleY,
+      width: crop.width * scaleX,
+      height: crop.height * scaleY,
+    };
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            console.error("Canvas is empty");
+            resolve(null);
+            return;
+          }
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        },
+        "image/jpeg",
+        0.7 // Adjust quality to meet 50KB limit
+      );
+    });
+  };
+
+  // Apply crop and save image
+  const handleCropApply = async () => {
+    if (imgRef.current && completedCrop?.width && completedCrop?.height) {
+      try {
+        const base64Image = await getCroppedImg(imgRef.current, completedCrop);
+
+        if (!base64Image) {
+          throw new Error("Failed to crop image");
+        }
+
+        // Check if the cropped image is under 50KB
+        const base64Data = base64Image.split(",")[1];
+        const sizeInBytes = Math.ceil(base64Data.length * 0.75);
+        const sizeInKB = sizeInBytes / 1024;
+
+        if (sizeInKB > 50) {
+          setAlert({
+            variant: "error",
+            title: "Image Too Large",
+            message:
+              "Cropped image exceeds 50KB limit. Please crop a smaller area or reduce quality.",
+          });
+          return;
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          picture: base64Image,
+        }));
+
+        setShowCropModal(false);
+        setImgSrc("");
+        setCrop({
+          unit: "%",
+          width: 90,
+          height: 90,
+          x: 5,
+          y: 5,
+        });
+        setCompletedCrop(null);
+
+        setAlert({
+          variant: "success",
+          title: "Success",
+          message: "Image cropped and saved successfully!",
+        });
+        setTimeout(() => setAlert(null), 3000);
+      } catch (error) {
+        console.error("Error cropping image:", error);
+        setAlert({
+          variant: "error",
+          title: "Crop Error",
+          message: "Failed to crop image. Please try again.",
+        });
+        setTimeout(() => setAlert(null), 5000);
+      }
+    }
+  };
+
+  // Remove picture
+  const handleRemovePicture = () => {
+    setFormData((prev) => ({
+      ...prev,
+      picture: "",
+    }));
+    setImgSrc("");
+    setCrop({
+      unit: "%",
+      width: 90,
+      height: 90,
+      x: 5,
+      y: 5,
+    });
+    setCompletedCrop(null);
+  };
 
   // Fetch specific student data when needed
   const fetchStudentById = async (studentId) => {
@@ -527,6 +748,7 @@ export default function ManageStudents() {
       transportType: existingData.transportType || "walk",
       bus: existingData.bus || "",
       externalLoginCredential: existingCredentials,
+      picture: existingData.picture || "", // Add picture from existing data
     });
 
     // OPTIONAL: Fetch fresh data in background for updates
@@ -557,6 +779,7 @@ export default function ManageStudents() {
           status:
             freshData.status !== undefined ? freshData.status : prev.status,
           externalLoginCredential: freshCredentials,
+          picture: freshData.picture || prev.picture, // Update picture with fresh data
         }));
 
         // Update external login credentials
@@ -622,6 +845,9 @@ export default function ManageStudents() {
         notes: formData.notes?.trim() || undefined,
         transportType: formData.transportType,
         bus: formData.transportType === "bus" ? formData.bus : undefined,
+
+        // Include picture if available
+        picture: formData.picture || undefined,
 
         // Include external login credentials
         externalLoginCredential:
@@ -1034,15 +1260,107 @@ export default function ManageStudents() {
                         />
                       </div>
 
-                      <div>
-                        <Label htmlFor="image">Student Image</Label>
-                        <FileInput
-                          id="image"
-                          type="file"
-                          name="image"
-                          disabled={modalLoading}
-                        />
+                      <div className="sm:col-span-2">
+                        <Label htmlFor="picture">Student Image</Label>
+                        <div className="space-y-2">
+                          <FileInput
+                            id="picture"
+                            type="file"
+                            name="picture"
+                            onChange={handlePictureChange}
+                            accept="image/jpeg, image/jpg, image/png, image/gif, image/webp"
+                            disabled={modalLoading}
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Maximum file size: 50KB. Supported formats: JPEG,
+                            PNG, GIF, WebP
+                          </p>
+
+                          {formData.picture && (
+                            <div className="mt-3">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={formData.picture}
+                                  alt="Student preview"
+                                  className="w-20 h-20 rounded-lg object-cover border"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleRemovePicture}
+                                  className="text-error-600 hover:text-error-700"
+                                  disabled={modalLoading}
+                                >
+                                  Remove Image
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Crop Modal */}
+                      {showCropModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+                            <div className="flex justify-between items-center mb-4">
+                              <h3 className="text-lg font-semibold">
+                                Crop Image
+                              </h3>
+                              <button
+                                onClick={() => setShowCropModal(false)}
+                                className="text-gray-500 hover:text-gray-700 text-2xl"
+                              >
+                                ×
+                              </button>
+                            </div>
+
+                            <div className="max-h-96 overflow-auto mb-4">
+                              {imgSrc && (
+                                <ReactCrop
+                                  crop={crop}
+                                  onChange={(_, percentCrop) =>
+                                    setCrop(percentCrop)
+                                  }
+                                  onComplete={(c) => setCompletedCrop(c)}
+                                  aspect={1}
+                                  circularCrop={false}
+                                >
+                                  <img
+                                    ref={imgRef}
+                                    alt="Crop me"
+                                    src={imgSrc}
+                                    onLoad={onImageLoad}
+                                    style={{
+                                      maxHeight: "400px",
+                                      maxWidth: "100%",
+                                    }}
+                                  />
+                                </ReactCrop>
+                              )}
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => setShowCropModal(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={handleCropApply}
+                                disabled={
+                                  !completedCrop?.width ||
+                                  !completedCrop?.height
+                                }
+                              >
+                                Apply Crop
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <div>
                         <Label htmlFor="englishFirst" required>

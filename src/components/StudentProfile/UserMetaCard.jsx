@@ -1,4 +1,3 @@
-import Owner from "../../assets/images/user/user-01.jpg";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../../hooks/useAuth";
 import Loader from "../common/Loader";
@@ -75,6 +74,15 @@ export default function UserMetaCard({ id }) {
       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
   };
 
+  // Get image source - use student picture if available, otherwise fallback
+  const getImageSrc = () => {
+    if (student?.picture) {
+      return student.picture;
+    }
+    // You can add a default student image here if needed
+    return "/src/assets/images/user/user-01.jpg"; // Add this default image
+  };
+
   if (loading) return <Loader />;
 
   if (error) {
@@ -102,7 +110,15 @@ export default function UserMetaCard({ id }) {
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
           <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
-            <img src={Owner} alt="student" />
+            <img
+              src={getImageSrc()}
+              alt={`${student.englishFirst} ${student.englishLast}`}
+              className="object-cover w-full h-full"
+              onError={(e) => {
+                // Fallback if image fails to load
+                e.target.src = "/src/assets/images/user/default-student.jpg";
+              }}
+            />
           </div>
 
           <div className="order-3 xl:order-2 flex-1">
