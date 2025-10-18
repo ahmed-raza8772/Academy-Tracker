@@ -34,6 +34,9 @@ import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
 import AddCourses from "./pages/AdminPages/relatedCourses/AddCourses";
 import ManageCourses from "./pages/AdminPages/relatedCourses/ManageCourses";
 
+//Related Schools
+import School from "./pages/AdminPages/relatedSchool/School";
+
 //Schedule Courses
 import ScheduleManagement from "./pages/AdminPages/relatedSchedule/ScheduleManagement";
 
@@ -205,6 +208,7 @@ export default function App() {
           <Route path="Buses/Add" element={<AddBuses />} />
           <Route path="Buses/Manage" element={<ManageBuses />} />'
           <Route path="Teachers" element={<Teachers />} />'
+          <Route path="Schools" element={<School />} />'
           <Route path="*" element={<Navigate to="Dashboard" replace />} />
         </Route>
 

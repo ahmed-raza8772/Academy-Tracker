@@ -85,7 +85,7 @@ export const AdminSidebarData = [
     subItems: [
       {
         name: "Schools",
-        path: "/Admin/Schools/Manage",
+        path: "/Admin/Schools",
         icon: <FaIcons.FaUniversity />,
       },
     ],
