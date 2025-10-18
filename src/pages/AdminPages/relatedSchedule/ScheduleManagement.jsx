@@ -17,6 +17,7 @@ import {
   TableCell,
   TableRow,
 } from "../../../components/ui/table";
+import Footer from "../../../components/footer/Footer";
 
 export default function ScheduleManagement() {
   const { token } = useAuthStore();
@@ -2026,6 +2027,7 @@ export default function ScheduleManagement() {
           </form>
         </div>
       </Modal>
+      <Footer />
     </div>
   );
 }

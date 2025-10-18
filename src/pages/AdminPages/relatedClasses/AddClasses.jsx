@@ -9,6 +9,7 @@ import Alert from "../../../components/ui/alert/Alert";
 import Loader from "../../../components/common/Loader";
 import Label from "../../../components/form/Label";
 import { Link } from "react-router";
+import Footer from "../../../components/footer/Footer";
 
 export default function AddClasses() {
   const { token } = useAuthStore();
@@ -251,6 +252,7 @@ export default function AddClasses() {
           </ComponentCard>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

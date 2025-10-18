@@ -3,25 +3,19 @@ import { Link } from "react-router-dom";
 import { EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
-import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
 import logo from "../../assets/images/logo/logo.svg";
 import logodark from "../../assets/images/logo/logo-dark.svg";
 import Alert from "../ui/alert/Alert";
 
-// 🔥 MODIFICATION 1: Accept the errorMessage prop
 export default function SignInForm({ onSubmit, errorMessage }) {
   const [showPassword, setShowPassword] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
   const [alert, setAlert] = useState(false);
 
   const [passEmpty, setPassEmpty] = useState(false);
   const [emailEmpty, setEmailEmpty] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // NOTE: You might want to also clear the server error when the user starts typing
-  // For simplicity, we'll let the parent component handle clearing it on a new submit attempt.
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -50,7 +44,8 @@ export default function SignInForm({ onSubmit, errorMessage }) {
         setPassEmpty(true);
         setTimeout(() => setPassEmpty(false), 3000);
       } else {
-        onSubmit({ email, password, remember: isChecked });
+        // 🔥 MODIFICATION: Always send remember: true
+        onSubmit({ email, password, remember: true });
       }
     }
   };
@@ -67,7 +62,7 @@ export default function SignInForm({ onSubmit, errorMessage }) {
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
-            <h1 className="mb-2  font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
+            <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Sign In
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -75,7 +70,7 @@ export default function SignInForm({ onSubmit, errorMessage }) {
             </p>
           </div>
 
-          {/* 🔥 MODIFICATION 2: Render the server-side error message */}
+          {/* Server-side error message */}
           {errorMessage && (
             <div className="mb-4">
               <Alert
@@ -107,7 +102,6 @@ export default function SignInForm({ onSubmit, errorMessage }) {
             <div className="relative flex justify-center text-sm"></div>
           </div>
 
-          {/* ✅ Form */}
           <form onSubmit={handleSubmit}>
             <div className="space-y-6">
               <div>
@@ -153,12 +147,8 @@ export default function SignInForm({ onSubmit, errorMessage }) {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Checkbox checked={isChecked} onChange={setIsChecked} />
-                  <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
-                    Keep me logged in
-                  </span>
-                </div>
+                {/* 🔥 MODIFICATION: Removed checkbox and "Keep me logged in" text */}
+                <div></div>
                 <Link
                   to="/Account/forgot"
                   className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"

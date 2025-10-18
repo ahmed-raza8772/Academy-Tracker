@@ -20,6 +20,7 @@ import Alert from "../../../components/ui/alert/Alert";
 import Select from "../../../components/form/Select";
 import ConfirmationModal from "../../../components/form/ConfirmationModal";
 import { useAuthStore } from "../../../hooks/useAuth";
+import Footer from "../../../components/footer/Footer";
 
 export default function ManageCourses() {
   const [courses, setCourses] = useState([]);
@@ -325,7 +326,7 @@ export default function ManageCourses() {
           {/* Table */}
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
-              <div className="min-w-[1102px]">
+              <div className="min-w-fit">
                 <Table>
                   <TableHeader className="border-b border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-white/[0.05]">
                     <TableRow>
@@ -629,6 +630,7 @@ export default function ManageCourses() {
           message={`Are you sure you want to deactivate course ${courseToDelete?.courseCode}? This action cannot be undone.`}
         />
       </div>
+      <Footer />
     </div>
   );
 }

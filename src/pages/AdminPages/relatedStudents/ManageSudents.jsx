@@ -23,6 +23,7 @@ import MultiSelect from "../../../components/form/MultiSelect";
 import FileInput from "../../../components/form/input/FileInput";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
+import Footer from "../../../components/footer/Footer";
 
 export default function ManageStudents() {
   const { token } = useAuthStore();
@@ -991,7 +992,7 @@ export default function ManageStudents() {
           {/* Table */}
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
-              <div className="min-w-[1102px]">
+              <div className="min-w-fit">
                 <Table>
                   <TableHeader className="border-b border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-white/[0.05]">
                     <TableRow>
@@ -2155,6 +2156,7 @@ export default function ManageStudents() {
           message={`Are you sure you want to deactivate student ${studentToDelete?.studentId}? This action cannot be undone.`}
         />
       </div>
+      <Footer />
     </div>
   );
 }

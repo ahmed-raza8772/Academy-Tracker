@@ -10,6 +10,7 @@ import Loader from "../../../components/common/Loader";
 import Label from "../../../components/form/Label";
 import { FaBus, FaCheck, FaUser, FaUsers } from "react-icons/fa";
 import { Link } from "react-router";
+import Footer from "../../../components/footer/Footer";
 
 export default function AddBuses() {
   const { token } = useAuthStore();
@@ -455,6 +456,7 @@ export default function AddBuses() {
           </ComponentCard>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

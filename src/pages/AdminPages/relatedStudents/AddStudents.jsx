@@ -15,6 +15,7 @@ import { useAuthStore } from "../../../hooks/useAuth";
 import Alert from "../../../components/ui/alert/Alert";
 import MultiSelect from "../../../components/form/MultiSelect";
 import SuccessMessage from "../../../components/ui/success/SuccessMessage";
+import Footer from "../../../components/footer/Footer";
 
 export default function AddStudents() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -1951,6 +1952,8 @@ export default function AddStudents() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }

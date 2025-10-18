@@ -9,6 +9,7 @@ import Alert from "../../../components/ui/alert/Alert";
 import Loader from "../../../components/common/Loader";
 import Label from "../../../components/form/Label";
 import { Link } from "react-router";
+import Footer from "../../../components/footer/Footer";
 
 export default function AddCourses() {
   const { token } = useAuthStore();
@@ -232,6 +233,7 @@ export default function AddCourses() {
           </ComponentCard>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

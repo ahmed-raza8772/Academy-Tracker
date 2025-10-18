@@ -13,7 +13,6 @@ createRoot(document.getElementById("root")).render(
     <ThemeProvider>
       <AppWrapper>
         <App />
-        <Footer />
       </AppWrapper>
     </ThemeProvider>
   </StrictMode>

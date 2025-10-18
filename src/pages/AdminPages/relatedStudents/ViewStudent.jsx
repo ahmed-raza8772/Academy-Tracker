@@ -9,6 +9,7 @@ import { useParams } from "react-router";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../../../hooks/useAuth";
 import ExternalLoginCredentials from "../../../components/StudentProfile/ExternalLoginCredentials";
+import Footer from "../../../components/footer/Footer";
 
 export default function ViewStudent() {
   const { id } = useParams();
@@ -730,6 +731,7 @@ export default function ViewStudent() {
           <UserAddressCard id={id} />
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

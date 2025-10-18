@@ -6,6 +6,7 @@ import RecentActivity from "../../components/ecommerce/RecentActivity";
 import DemographicCard from "../../components/ecommerce/DemographicCard";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import Footer from "../../components/footer/Footer";
 
 export default function Home() {
   return (
@@ -37,6 +38,7 @@ export default function Home() {
           <RecentActivity />
         </div>
       </div>
+      <Footer />
     </>
   );
 }

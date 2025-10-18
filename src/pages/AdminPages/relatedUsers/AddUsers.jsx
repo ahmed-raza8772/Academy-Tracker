@@ -5,6 +5,7 @@ import PageMeta from "../../../components/common/PageMeta";
 import Input from "../../../components/form/input/InputField";
 import SuccessMessage from "../../../components/ui/success/SuccessMessage";
 import { useAuthStore } from "../../../hooks/useAuth";
+import Footer from "../../../components/footer/Footer";
 
 export default function AddUsers() {
   const [searchParams] = useSearchParams();
@@ -555,25 +556,9 @@ export default function AddUsers() {
               </button>
             </div>
           </form>
-
-          {/* Form Requirements */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg dark:bg-gray-800/50">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Required Fields:
-            </h4>
-            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-              <li>• Full Name - User's complete name</li>
-              <li>• Email - Valid email address</li>
-              <li>• Username - Automatically matches email</li>
-              <li>• Password - Minimum 6 characters</li>
-              <li>• Role - User's role in the system</li>
-              {formData.role === "teacher" && (
-                <li>• Teacher Type - Required for teacher roles</li>
-              )}
-            </ul>
-          </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

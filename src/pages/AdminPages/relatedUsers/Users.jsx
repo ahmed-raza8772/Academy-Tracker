@@ -1,5 +1,6 @@
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import PageMeta from "../../../components/common/PageMeta";
+import Footer from "../../../components/footer/Footer";
 
 export default function Users() {
   return (
@@ -20,6 +21,7 @@ export default function Users() {
           </p>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
