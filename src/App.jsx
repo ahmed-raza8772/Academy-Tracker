@@ -23,6 +23,9 @@ import Blank from "./pages/Blank";
 // Admin Pages
 import AdminDashboard from "./pages/AdminPages/Home";
 
+//related Teachers
+import Teachers from "./pages/AdminPages/relatedTeachers/Teachers";
+
 //Related Classes
 import AddClasses from "./pages/AdminPages/relatedClasses/AddClasses";
 import ManageClasses from "./pages/AdminPages/relatedClasses/ManageClasses";
@@ -200,7 +203,8 @@ export default function App() {
           <Route path="Users/Add" element={<AddUsers />} />
           <Route path="Users/Manage" element={<Users />} />
           <Route path="Buses/Add" element={<AddBuses />} />
-          <Route path="Buses/Manage" element={<ManageBuses />} />
+          <Route path="Buses/Manage" element={<ManageBuses />} />'
+          <Route path="Teachers" element={<Teachers />} />'
           <Route path="*" element={<Navigate to="Dashboard" replace />} />
         </Route>
 

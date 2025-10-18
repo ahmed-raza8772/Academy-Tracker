@@ -44,18 +44,7 @@ export const AdminSidebarData = [
   {
     name: "Teachers",
     icon: <FaIcons.FaChalkboardTeacher />,
-    subItems: [
-      {
-        name: "Add Teacher",
-        path: "/blank",
-        icon: <FaIcons.FaUserPlus />,
-      },
-      {
-        name: "Manage Teachers",
-        path: "/blank",
-        icon: <FaIcons.FaUsersCog />,
-      },
-    ],
+    path: "/Admin/Teachers",
   },
   {
     name: "Classes & Courses",
